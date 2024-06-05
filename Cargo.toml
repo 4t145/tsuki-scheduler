@@ -1,0 +1,9 @@
+[package]
+name = "tsuki-scheduler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytes = "1.6.0"
+future-utils = "0.12.1"
+quinn = "0.11.1"
