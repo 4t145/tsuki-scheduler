@@ -24,6 +24,30 @@ impl Period {
     }
 }
 
+fn time_mod(x: TimeDelta, p: TimeDelta) -> TimeDelta {
+    if p == TimeDelta::zero() {
+        panic!("Period must be positive")
+    }
+    if x < p {
+        return x;
+    }
+    let s_x = x.num_seconds();
+    let n_x = x.subsec_nanos() as i64;
+    let s_p = p.num_seconds();
+    let n_p = p.subsec_nanos() as i64;
+    const NANOS_PER_SEC: i64 = 1_000_000_000;
+    if s_p == 0 {
+        let nanos_in_total = (n_x % n_p) + ((NANOS_PER_SEC % n_p) * ((s_x) % n_p) % n_p);
+        let secs = nanos_in_total / NANOS_PER_SEC;
+        let nanos = (nanos_in_total % NANOS_PER_SEC) as u32;
+        return TimeDelta::new(secs, nanos).expect("invalid time delta");
+    }
+    let q_0 = s_x / (s_p + 1);
+    let s_r = s_x % (s_p + 1) - (n_p * q_0) / NANOS_PER_SEC;
+    let n_r = n_x % n_p + ((NANOS_PER_SEC % n_p) * ((s_r) % n_p) % n_p);
+    let x = TimeDelta::new(s_r, n_r as u32).expect("invalid time delta");
+    time_mod(x, p)
+}
 impl Schedule for Period {
     fn peek_next(&mut self) -> Option<Dtu> {
         Some(self.next)
@@ -37,23 +61,13 @@ impl Schedule for Period {
 
     fn forward(&mut self, dtu: Dtu) {
         if self.next < dtu {
-            let diff = dtu - self.next + self.period;
-            let s_d = diff.num_seconds();
-            let s_p = self.period.num_seconds();
-
-            let n_d = diff.subsec_nanos();
-            let n_p = self.period.subsec_nanos();
-            if n_p == 0 {
-                if s_p == 0 {
-    
-                }
-                self.next = dtu + TimeDelta::seconds(s_d - (s_d % s_p));
-            } else {
-                let r_s = s_d % s_p;
-                const NANOS_PER_SEC: i32 = 1_000_000_000;
-                let r_n = (n_d % n_p) + ((NANOS_PER_SEC % n_p) * ((r_s as i32) % n_p) % n_p);
-                self.next = dtu + TimeDelta::seconds(r_s) + TimeDelta::nanoseconds(r_n as i64);
+            let diff = dtu - self.next;
+            if diff < self.period {
+                self.next += self.period;
+                return;
             }
+
+            todo!()
         }
     }
 }
