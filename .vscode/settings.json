@@ -1,6 +1,13 @@
 {
     "rust-analyzer.cargo.features": [
         "tokio",
-        "async-std"
+        "async-std",
+        "cron"
+    ],
+    "cSpell.words": [
+        "Chrono",
+        "NANOS",
+        "peekable",
+        "subsec"
     ]
 }

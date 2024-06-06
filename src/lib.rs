@@ -8,14 +8,23 @@ use std::{
     },
     time::Instant,
 };
-
+pub type Dtu = chrono::DateTime<chrono::Utc>;
 pub mod runtime;
 pub mod schedule;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TaskUid(pub(crate) u64);
 
 pub trait Schedule {
-    fn next(&self) -> Option<std::time::Instant>;
+    fn peek_next(&mut self) -> Option<Dtu>;
+    fn next(&mut self) -> Option<Dtu>;
+    fn forward(&mut self, dtu: Dtu) {
+        while let Some(next) = self.peek_next() {
+            if next > dtu {
+                break;
+            }
+            self.next();
+        }
+    }
     fn merge<S>(self, schedule: S) -> MergedSchedule<Self, S>
     where
         Self: Sized,
@@ -24,18 +33,45 @@ pub trait Schedule {
     }
 }
 
+pub trait IntoSchedule {
+    type Output: Schedule;
+    fn into_schedule(self) -> Self::Output;
+}
+
 pub struct MergedSchedule<S0, S1>(S0, S1);
 impl<S0, S1> Schedule for MergedSchedule<S0, S1>
 where
     S0: Schedule,
     S1: Schedule,
 {
-    fn next(&self) -> Option<std::time::Instant> {
-        match (self.0.next(), self.1.next()) {
+    fn peek_next(&mut self) -> Option<Dtu> {
+        match (self.0.peek_next(), self.1.peek_next()) {
             (None, None) => None,
             (None, Some(next)) => Some(next),
             (Some(next), None) => Some(next),
             (Some(next_0), Some(next_1)) => Some(next_0.min(next_1)),
+        }
+    }
+    fn next(&mut self) -> Option<Dtu> {
+        match (self.0.peek_next(), self.1.peek_next()) {
+            (None, None) => None,
+            (None, Some(next)) => {
+                self.1.next();
+                Some(next)
+            }
+            (Some(next), None) => {
+                self.0.next();
+                Some(next)
+            }
+            (Some(next_0), Some(next_1)) => {
+                if next_0 < next_1 {
+                    self.0.next();
+                    Some(next_0)
+                } else {
+                    self.1.next();
+                    Some(next_1)
+                }
+            }
         }
     }
 }
@@ -51,12 +87,13 @@ pub struct Task<R> {
 impl<R: Runtime> Task<R> {
     pub fn by_spawn<F, Fut, S>(schedule: S, task: F) -> Self
     where
-        S: Schedule + Send + 'static,
+        S: IntoSchedule,
+        S::Output: 'static + Send,
         F: Fn() -> Fut + 'static + Send,
         Fut: Future<Output = ()> + 'static + Send,
     {
         Task {
-            schedule: Box::new(schedule),
+            schedule: Box::new(schedule.into_schedule()),
             run: Box::new(move |runtime: &R| {
                 runtime.spawn(task());
             }),
@@ -73,8 +110,13 @@ pub trait Runtime: Clone {
     fn sleep(&self, duration: std::time::Duration) -> impl Future<Output = ()> + Send;
 }
 
+pub enum TimePoint {
+    StdInstant(Instant),
+    SystemTime(std::time::SystemTime),
+    ChronoDtu(chrono::DateTime<chrono::Utc>),
+}
+
 pub struct Scheduler<R> {
-    pub next: Option<Instant>,
     pub next_up_qu: BinaryHeap<NextUp>,
     pub task: HashMap<TaskUid, Task<R>>,
     pub runtime: R,
@@ -82,7 +124,7 @@ pub struct Scheduler<R> {
 
 pub struct NextUp {
     key: TaskUid,
-    time: Instant,
+    time: chrono::DateTime<chrono::Utc>,
 }
 impl PartialEq for NextUp {
     fn eq(&self, other: &Self) -> bool {
@@ -106,7 +148,6 @@ impl Ord for NextUp {
 impl<R> Scheduler<R> {
     pub fn new(runtime: R) -> Self {
         Self {
-            next: None,
             next_up_qu: BinaryHeap::new(),
             task: HashMap::new(),
             runtime,
@@ -117,8 +158,8 @@ impl<R> Scheduler<R>
 where
     R: Runtime,
 {
-    pub fn add_task(&mut self, key: TaskUid, task: Task<R>) {
-        if let Some(next) = task.schedule.next() {
+    pub fn add_task(&mut self, key: TaskUid, mut task: Task<R>) {
+        if let Some(next) = task.schedule.peek_next() {
             let next_up = NextUp { key, time: next };
             self.task.insert(key, task);
             self.next_up_qu.push(next_up);
@@ -129,13 +170,13 @@ where
     }
 
     pub fn execute(&mut self) {
+        let now = chrono::Utc::now();
         while let Some(peek) = self.next_up_qu.peek() {
-            if peek.time.elapsed().is_zero() {
-                self.next = Some(peek.time);
+            if peek.time > now {
                 break;
             } else {
                 let mut next_up = self.next_up_qu.pop().expect("should has peek");
-                let Some(task) = self.task.get(&next_up.key) else {
+                let Some(task) = self.task.get_mut(&next_up.key) else {
                     // has been deleted
                     continue;
                 };
@@ -143,6 +184,8 @@ where
                 if let Some(next_call) = task.schedule.next() {
                     next_up.time = next_call;
                     self.next_up_qu.push(next_up);
+                } else {
+                    self.task.remove(&next_up.key);
                 }
             }
         }
