@@ -15,6 +15,11 @@ pub trait Schedule {
     fn forward(&mut self, dtu: Dtu);
 }
 
+#[inline]
+pub fn now() -> Dtu {
+    chrono::Utc::now()
+}
+
 pub fn forward_default<S: Schedule>(schedule: &mut S, dtu: Dtu) {
     while let Some(next) = schedule.peek_next() {
         if next > dtu {
@@ -38,8 +43,8 @@ impl<S: Schedule> IntoSchedule for S {
 }
 
 pub struct Task<R> {
-    schedule: Box<dyn Schedule + Send>,
-    run: Box<dyn Fn(&R) + Send>,
+    pub schedule: Box<dyn Schedule + Send>,
+    pub run: Box<dyn Fn(&R) + Send>,
 }
 
 impl<R> std::fmt::Debug for Task<R> {
@@ -106,8 +111,8 @@ impl<R> Scheduler<R> {
         self.task_map.remove(&key)
     }
 
-    pub fn execute(&mut self) {
-        let now = chrono::Utc::now();
+    pub fn execute(&mut self, base_time: Dtu) {
+        let now = base_time;
         while let Some(peek) = self.next_up_heap.peek() {
             if peek.time > now {
                 break;

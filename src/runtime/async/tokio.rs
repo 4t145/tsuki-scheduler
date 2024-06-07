@@ -49,7 +49,7 @@ impl AsyncRuntime for Tokio {
 }
 
 impl AsyncScheduler<Tokio> {
-    pub fn async_std() -> Self {
+    pub fn tokio() -> Self {
         Self::new(Tokio::default())
     }
 }

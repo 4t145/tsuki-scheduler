@@ -6,6 +6,8 @@ use std::{
     },
 };
 
+use chrono::Utc;
+
 use crate::{IntoSchedule, Scheduler, Task, TaskUid};
 
 #[cfg(feature = "async-std")]
@@ -64,7 +66,8 @@ where
                         scheduler.delete_task(key);
                     }
                     Signal::Execute => {
-                        scheduler.execute();
+                        let now = Utc::now();
+                        scheduler.execute(now);
                     }
                     Signal::Quit => {
                         break;

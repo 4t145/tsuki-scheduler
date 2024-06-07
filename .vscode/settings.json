@@ -2,7 +2,8 @@
     "rust-analyzer.cargo.features": [
         "tokio",
         "async-std",
-        "cron"
+        "cron",
+        "thread"
     ],
     "cSpell.words": [
         "Chrono",

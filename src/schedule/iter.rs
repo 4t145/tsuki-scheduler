@@ -46,3 +46,11 @@ impl IntoSchedule for Vec<Dtu> {
         Iter::new(self)
     }
 }
+
+impl IntoSchedule for Option<Dtu> {
+    type Output = Iter<std::option::IntoIter<Dtu>>;
+
+    fn into_schedule(self) -> Self::Output {
+        Iter::new(self)
+    }
+}
