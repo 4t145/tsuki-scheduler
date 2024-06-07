@@ -2,19 +2,19 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::{Runtime, Signal};
+use crate::{AsyncRuntime, AsyncScheduler, Signal};
 #[derive(Debug, Clone)]
-pub struct TokioRuntime {
+pub struct Tokio {
     pub signal_sender: Arc<tokio::sync::mpsc::UnboundedSender<Signal<Self>>>,
     pub signal_receiver: Arc<Mutex<tokio::sync::mpsc::UnboundedReceiver<Signal<Self>>>>,
 }
 
-impl Default for TokioRuntime {
+impl Default for Tokio {
     fn default() -> Self {
         Self::new()
     }
 }
-impl TokioRuntime {
+impl Tokio {
     pub fn new() -> Self {
         let (signal_sender, signal_receiver) = tokio::sync::mpsc::unbounded_channel();
         Self {
@@ -24,7 +24,7 @@ impl TokioRuntime {
     }
 }
 
-impl Runtime for TokioRuntime {
+impl AsyncRuntime for Tokio {
     fn spawn<F>(&self, task: F)
     where
         F: std::future::Future<Output = ()> + 'static + Send,
@@ -48,5 +48,11 @@ impl Runtime for TokioRuntime {
 
     fn sleep(&self, duration: std::time::Duration) -> impl std::future::Future<Output = ()> {
         tokio::time::sleep(duration)
+    }
+}
+
+impl AsyncScheduler<Tokio> {
+    pub fn async_std() -> Self {
+        Self::new(Tokio::default())
     }
 }

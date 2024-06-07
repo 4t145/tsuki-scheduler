@@ -6,11 +6,11 @@ use std::{
         self,
         atomic::{AtomicBool, AtomicU64},
     },
-    time::Instant,
 };
 pub type Dtu = chrono::DateTime<chrono::Utc>;
 pub mod runtime;
 pub mod schedule;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TaskUid(pub(crate) u64);
 
@@ -24,12 +24,6 @@ pub trait Schedule {
             }
             self.next();
         }
-    }
-    fn merge<S>(self, schedule: S) -> MergedSchedule<Self, S>
-    where
-        Self: Sized,
-    {
-        MergedSchedule(self, schedule)
     }
 }
 
@@ -45,53 +39,13 @@ impl<S: Schedule> IntoSchedule for S {
         self
     }
 }
-pub struct MergedSchedule<S0, S1>(S0, S1);
-impl<S0, S1> Schedule for MergedSchedule<S0, S1>
-where
-    S0: Schedule,
-    S1: Schedule,
-{
-    fn peek_next(&mut self) -> Option<Dtu> {
-        match (self.0.peek_next(), self.1.peek_next()) {
-            (None, None) => None,
-            (None, Some(next)) => Some(next),
-            (Some(next), None) => Some(next),
-            (Some(next_0), Some(next_1)) => Some(next_0.min(next_1)),
-        }
-    }
-    fn next(&mut self) -> Option<Dtu> {
-        match (self.0.peek_next(), self.1.peek_next()) {
-            (None, None) => None,
-            (None, Some(next)) => {
-                self.1.next();
-                Some(next)
-            }
-            (Some(next), None) => {
-                self.0.next();
-                Some(next)
-            }
-            (Some(next_0), Some(next_1)) => {
-                if next_0 < next_1 {
-                    self.0.next();
-                    Some(next_0)
-                } else {
-                    self.1.next();
-                    Some(next_1)
-                }
-            }
-        }
-    }
-}
 
-pub trait Timer {
-    fn tick(&self) -> impl Future<Output = ()>;
-}
 pub struct Task<R> {
     schedule: Box<dyn Schedule + Send>,
     run: Box<dyn Fn(&R) + Send>,
 }
 
-impl<R: Runtime> Task<R> {
+impl<R: AsyncRuntime> Task<R> {
     pub fn by_spawn<F, Fut, S>(schedule: S, task: F) -> Self
     where
         S: IntoSchedule,
@@ -106,21 +60,6 @@ impl<R: Runtime> Task<R> {
             }),
         }
     }
-}
-
-pub trait Runtime: Clone {
-    fn spawn<F>(&self, task: F)
-    where
-        F: Future<Output = ()> + Send + 'static;
-    fn send_signal(&self, signal: Signal<Self>);
-    fn recv_signal(&self) -> impl Future<Output = Signal<Self>> + Send;
-    fn sleep(&self, duration: std::time::Duration) -> impl Future<Output = ()> + Send;
-}
-
-pub enum TimePoint {
-    StdInstant(Instant),
-    SystemTime(std::time::SystemTime),
-    ChronoDtu(chrono::DateTime<chrono::Utc>),
 }
 
 pub struct Scheduler<R> {
@@ -148,7 +87,8 @@ impl PartialOrd for NextUp {
 }
 impl Ord for NextUp {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.time.cmp(&other.time)
+        // the task with earlier next time has higher priority
+        self.time.cmp(&other.time).reverse()
     }
 }
 
@@ -163,7 +103,7 @@ impl<R> Scheduler<R> {
 }
 impl<R> Scheduler<R>
 where
-    R: Runtime,
+    R: AsyncRuntime,
 {
     pub fn add_task(&mut self, key: TaskUid, mut task: Task<R>) {
         if let Some(next) = task.schedule.peek_next() {
@@ -199,7 +139,8 @@ where
     }
 }
 
-pub struct SharedScheduler<R> {
+#[derive(Debug, Default)]
+pub struct AsyncScheduler<R> {
     runtime: R,
     next_id: AtomicU64,
     running: AtomicBool,
@@ -212,9 +153,18 @@ pub enum Signal<R> {
     Quit,
 }
 
-impl<R> SharedScheduler<R>
+pub trait AsyncRuntime: Clone {
+    fn spawn<F>(&self, task: F)
+    where
+        F: Future<Output = ()> + Send + 'static;
+    fn send_signal(&self, signal: Signal<Self>);
+    fn recv_signal(&self) -> impl Future<Output = Signal<Self>> + Send;
+    fn sleep(&self, duration: std::time::Duration) -> impl Future<Output = ()> + Send;
+}
+
+impl<R> AsyncScheduler<R>
 where
-    R: Runtime + Send + 'static,
+    R: AsyncRuntime + Send + 'static,
 {
     pub fn new(runtime: R) -> Self {
         Self {
@@ -224,6 +174,9 @@ where
         }
     }
     pub fn start(&self) {
+        if self.is_running() {
+            return;
+        }
         let main_loop_runtime = self.runtime.clone();
         self.running.store(true, sync::atomic::Ordering::SeqCst);
         self.runtime.spawn(async move {
@@ -263,20 +216,13 @@ where
         self.send_signal(Signal::Execute);
     }
     pub fn quit(self) {
-        self.send_signal(Signal::Quit);
-        self.running.store(false, sync::atomic::Ordering::SeqCst);
+        if self.is_running() {
+            self.send_signal(Signal::Quit);
+            self.running.store(false, sync::atomic::Ordering::SeqCst);
+        }
     }
+    #[inline]
     pub fn is_running(&self) -> bool {
         self.running.load(sync::atomic::Ordering::SeqCst)
-    }
-    pub fn start_with_interval_execution(&self, interval: std::time::Duration) {
-        let main_loop_runtime = self.runtime.clone();
-        self.start();
-        self.runtime.spawn(async move {
-            loop {
-                main_loop_runtime.sleep(interval).await;
-                main_loop_runtime.send_signal(Signal::Execute);
-            }
-        });
     }
 }

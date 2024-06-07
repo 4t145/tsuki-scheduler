@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::{Dtu, Schedule};
+use crate::{Dtu, IntoSchedule, Schedule};
 
 pub struct Iter<I: Iterator<Item = Dtu>> {
     inner: Peekable<I>,
@@ -22,5 +22,24 @@ where
 
     fn next(&mut self) -> Option<crate::Dtu> {
         self.inner.next()
+    }
+}
+
+
+impl<const N: usize> IntoSchedule for [Dtu; N] {
+    type Output = Iter<std::array::IntoIter<Dtu, N>>;
+
+    fn into_schedule(mut self) -> Self::Output {
+        self.sort();
+        Iter::new(self)
+    }
+}
+
+impl IntoSchedule for Vec<Dtu> {
+    type Output = Iter<std::vec::IntoIter<Dtu>>;
+
+    fn into_schedule(mut self) -> Self::Output {
+        self.sort();
+        Iter::new(self)
     }
 }

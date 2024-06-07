@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use async_std::sync::Mutex;
 
-use crate::{Runtime, Signal};
+use crate::{AsyncRuntime, AsyncScheduler, Signal};
 #[derive(Debug, Clone)]
-pub struct AsyncStdRuntime {
+pub struct AsyncStd {
     pub signal_sender: Arc<async_std::channel::Sender<Signal<Self>>>,
     pub signal_receiver: Arc<Mutex<async_std::channel::Receiver<Signal<Self>>>>,
 }
 
-impl Runtime for AsyncStdRuntime {
+impl AsyncRuntime for AsyncStd {
     fn spawn<F>(&self, task: F)
     where
         F: std::future::Future<Output = ()> + 'static + Send,
@@ -37,19 +37,24 @@ impl Runtime for AsyncStdRuntime {
     }
 }
 
-
-impl Default for AsyncStdRuntime {
+impl Default for AsyncStd {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl AsyncStdRuntime {
+impl AsyncStd {
     pub fn new() -> Self {
         let (signal_sender, signal_receiver) = async_std::channel::unbounded();
         Self {
             signal_sender: Arc::new(signal_sender),
             signal_receiver: Arc::new(Mutex::new(signal_receiver)),
         }
+    }
+}
+
+impl AsyncScheduler<AsyncStd> {
+    pub fn async_std() -> Self {
+        Self::new(AsyncStd::default())
     }
 }
