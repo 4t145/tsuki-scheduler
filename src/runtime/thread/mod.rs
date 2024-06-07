@@ -82,9 +82,9 @@ fn test_thread_schedule() {
         Task::<ThreadRuntime>::by_spawn([first_call, second_call], task_1),
     );
     std::thread::sleep(std::time::Duration::from_secs(1));
-    scheduler.execute(crate::now());
+    scheduler.execute_by_now();
     std::thread::sleep(std::time::Duration::from_secs(1));
-    scheduler.execute(crate::now());
+    scheduler.execute_by_now();
     scheduler.runtime().join_all();
     assert_eq!(task_0_run_count.load(Ordering::SeqCst), 1);
     assert_eq!(task_1_run_count.load(Ordering::SeqCst), 2);

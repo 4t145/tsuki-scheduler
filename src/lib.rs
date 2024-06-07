@@ -111,6 +111,9 @@ impl<R> Scheduler<R> {
         self.task_map.remove(&key)
     }
 
+    pub fn execute_by_now(&mut self)  {
+        self.execute(chrono::Utc::now())
+    }   
     pub fn execute(&mut self, base_time: Dtu) {
         let now = base_time;
         while let Some(peek) = self.next_up_heap.peek() {
