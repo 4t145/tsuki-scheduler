@@ -1,14 +1,12 @@
 use std::{iter::Peekable, str::FromStr};
-
+use crate::{Dtu, IntoSchedule, Schedule};
 use chrono::{Local, Utc};
 use cron::OwnedScheduleIterator;
 
-use crate::{Dtu, IntoSchedule, Schedule};
-
 pub struct Cron<Z: chrono::offset::TimeZone> {
-    pub iterator: Peekable<OwnedScheduleIterator<Z>>,
-    pub schedule: cron::Schedule,
-    pub tz: Z,
+    iterator: Peekable<OwnedScheduleIterator<Z>>,
+    schedule: cron::Schedule,
+    tz: Z,
 }
 
 impl<Z: chrono::offset::TimeZone> Cron<Z> {
@@ -23,14 +21,14 @@ impl<Z: chrono::offset::TimeZone> Cron<Z> {
 }
 
 impl Cron<Utc> {
-    pub fn from_cron_expr(expr: &str) -> Result<Self, cron::error::Error> {
+    pub fn utc_from_cron_expr(expr: &str) -> Result<Self, cron::error::Error> {
         let schedule = cron::Schedule::from_str(expr)?;
         Ok(Self::from_cron_schedule(schedule, Utc))
     }
 }
 
 impl Cron<Local> {
-    pub fn from_cron_expr(expr: &str) -> Result<Self, cron::error::Error> {
+    pub fn local_from_cron_expr(expr: &str) -> Result<Self, cron::error::Error> {
         let schedule = cron::Schedule::from_str(expr)?;
         Ok(Self::from_cron_schedule(schedule, Local))
     }

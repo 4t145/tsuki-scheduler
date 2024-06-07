@@ -32,4 +32,8 @@ impl<S: Schedule> Schedule for Before<S> {
         }
         self.inner.next()
     }
+
+    fn forward(&mut self, dtu: Dtu) {
+        self.inner.forward(dtu)
+    }
 }

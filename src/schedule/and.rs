@@ -36,6 +36,10 @@ where
             }
         }
     }
+    fn forward(&mut self, dtu: Dtu) {
+        self.0.forward(dtu);
+        self.1.forward(dtu);
+    }
 }
 
 impl<S0, S1> And<S0, S1> {

@@ -23,6 +23,10 @@ where
     fn next(&mut self) -> Option<crate::Dtu> {
         self.inner.next()
     }
+
+    fn forward(&mut self, dtu: Dtu) {
+        crate::forward_default(self, dtu)
+    }
 }
 
 impl<const N: usize> IntoSchedule for [Dtu; N] {

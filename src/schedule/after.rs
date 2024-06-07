@@ -23,4 +23,8 @@ impl<S: Schedule> Schedule for After<S> {
     fn next(&mut self) -> Option<Dtu> {
         self.inner.next()
     }
+
+    fn forward(&mut self, dtu: Dtu) {
+        self.inner.forward(dtu)
+    }
 }

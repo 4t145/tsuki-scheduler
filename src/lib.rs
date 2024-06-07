@@ -12,13 +12,15 @@ pub struct TaskUid(pub(crate) u64);
 pub trait Schedule {
     fn peek_next(&mut self) -> Option<Dtu>;
     fn next(&mut self) -> Option<Dtu>;
-    fn forward(&mut self, dtu: Dtu) {
-        while let Some(next) = self.peek_next() {
-            if next > dtu {
-                break;
-            }
-            self.next();
+    fn forward(&mut self, dtu: Dtu);
+}
+
+pub fn forward_default<S: Schedule>(schedule: &mut S, dtu: Dtu) {
+    while let Some(next) = schedule.peek_next() {
+        if next > dtu {
+            break;
         }
+        schedule.next();
     }
 }
 
@@ -58,6 +60,7 @@ pub struct NextUp {
     key: TaskUid,
     time: chrono::DateTime<chrono::Utc>,
 }
+
 impl PartialEq for NextUp {
     fn eq(&self, other: &Self) -> bool {
         self.time.eq(&other.time)
@@ -90,6 +93,7 @@ impl<R> Scheduler<R> {
         &self.runtime
     }
 }
+
 impl<R> Scheduler<R> {
     pub fn add_task(&mut self, key: TaskUid, mut task: Task<R>) {
         if let Some(next) = task.schedule.next() {

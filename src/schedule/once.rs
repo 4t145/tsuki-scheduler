@@ -18,6 +18,10 @@ impl Schedule for Once {
     fn next(&mut self) -> Option<Dtu> {
         self.next.take()
     }
+
+    fn forward(&mut self, dtu: Dtu) {
+        crate::forward_default(self, dtu)
+    }
 }
 
 impl IntoSchedule for Dtu {
