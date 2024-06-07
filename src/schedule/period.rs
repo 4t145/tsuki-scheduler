@@ -81,8 +81,6 @@ impl IntoSchedule for TimeDelta {
     }
 }
 
-
-
 #[test]
 fn test_forward() {
     let now = Utc::now();

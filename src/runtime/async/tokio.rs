@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::{AsyncRuntime, AsyncScheduler, Signal};
+use super::{AsyncRuntime, AsyncScheduler, Signal};
+
 #[derive(Debug, Clone)]
 pub struct Tokio {
     pub signal_sender: Arc<tokio::sync::mpsc::UnboundedSender<Signal<Self>>>,
@@ -44,10 +45,6 @@ impl AsyncRuntime for Tokio {
             .recv()
             .await
             .expect("fail to recv signal")
-    }
-
-    fn sleep(&self, duration: std::time::Duration) -> impl std::future::Future<Output = ()> {
-        tokio::time::sleep(duration)
     }
 }
 

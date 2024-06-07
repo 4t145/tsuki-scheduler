@@ -25,7 +25,6 @@ where
     }
 }
 
-
 impl<const N: usize> IntoSchedule for [Dtu; N] {
     type Output = Iter<std::array::IntoIter<Dtu, N>>;
 

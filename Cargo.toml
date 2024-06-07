@@ -2,6 +2,7 @@
 name = "tsuki-scheduler"
 version = "0.1.0"
 edition = "2021"
+authors = ["4t145<u4t145@163.com>"]
 
 [dependencies]
 chrono = { version = "0.4" }
@@ -10,6 +11,8 @@ async-std = { version = "1", optional = true }
 tokio = { version = "1", optional = true }
 
 [features]
-tokio = ["dep:tokio", "tokio/sync", "tokio/time", "tokio/rt"]
-async-std = ["dep:async-std"]
+async = []
+thread = []
+tokio = ["async", "dep:tokio", "tokio/sync", "tokio/rt"]
+async-std = ["async", "dep:async-std"]
 cron = ["dep:cron"]

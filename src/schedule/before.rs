@@ -33,4 +33,3 @@ impl<S: Schedule> Schedule for Before<S> {
         self.inner.next()
     }
 }
-

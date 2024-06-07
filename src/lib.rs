@@ -1,11 +1,6 @@
 use std::{
     collections::{BinaryHeap, HashMap},
-    future::Future,
     hash::Hash,
-    sync::{
-        self,
-        atomic::{AtomicBool, AtomicU64},
-    },
 };
 pub type Dtu = chrono::DateTime<chrono::Utc>;
 pub mod runtime;
@@ -45,29 +40,20 @@ pub struct Task<R> {
     run: Box<dyn Fn(&R) + Send>,
 }
 
-impl<R: AsyncRuntime> Task<R> {
-    pub fn by_spawn<F, Fut, S>(schedule: S, task: F) -> Self
-    where
-        S: IntoSchedule,
-        S::Output: 'static + Send,
-        F: Fn() -> Fut + 'static + Send,
-        Fut: Future<Output = ()> + 'static + Send,
-    {
-        Task {
-            schedule: Box::new(schedule.into_schedule()),
-            run: Box::new(move |runtime: &R| {
-                runtime.spawn(task());
-            }),
-        }
+impl<R> std::fmt::Debug for Task<R> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Task").finish_non_exhaustive()
     }
 }
 
+#[derive(Debug)]
 pub struct Scheduler<R> {
-    pub next_up_qu: BinaryHeap<NextUp>,
-    pub task: HashMap<TaskUid, Task<R>>,
-    pub runtime: R,
+    pub(crate) next_up_heap: BinaryHeap<NextUp>,
+    pub(crate) task_map: HashMap<TaskUid, Task<R>>,
+    pub(crate) runtime: R,
 }
 
+#[derive(Debug)]
 pub struct NextUp {
     key: TaskUid,
     time: chrono::DateTime<chrono::Utc>,
@@ -95,134 +81,46 @@ impl Ord for NextUp {
 impl<R> Scheduler<R> {
     pub fn new(runtime: R) -> Self {
         Self {
-            next_up_qu: BinaryHeap::new(),
-            task: HashMap::new(),
+            next_up_heap: BinaryHeap::new(),
+            task_map: HashMap::new(),
             runtime,
         }
     }
+    pub fn runtime(&self) -> &R {
+        &self.runtime
+    }
 }
-impl<R> Scheduler<R>
-where
-    R: AsyncRuntime,
-{
+impl<R> Scheduler<R> {
     pub fn add_task(&mut self, key: TaskUid, mut task: Task<R>) {
-        if let Some(next) = task.schedule.peek_next() {
+        if let Some(next) = task.schedule.next() {
             let next_up = NextUp { key, time: next };
-            self.task.insert(key, task);
-            self.next_up_qu.push(next_up);
+            self.task_map.insert(key, task);
+            self.next_up_heap.push(next_up);
         }
     }
     pub fn delete_task(&mut self, key: TaskUid) -> Option<Task<R>> {
-        self.task.remove(&key)
+        self.task_map.remove(&key)
     }
 
     pub fn execute(&mut self) {
         let now = chrono::Utc::now();
-        while let Some(peek) = self.next_up_qu.peek() {
+        while let Some(peek) = self.next_up_heap.peek() {
             if peek.time > now {
                 break;
             } else {
-                let mut next_up = self.next_up_qu.pop().expect("should has peek");
-                let Some(task) = self.task.get_mut(&next_up.key) else {
+                let mut next_up = self.next_up_heap.pop().expect("should has peek");
+                let Some(task) = self.task_map.get_mut(&next_up.key) else {
                     // has been deleted
                     continue;
                 };
                 (task.run)(&self.runtime);
                 if let Some(next_call) = task.schedule.next() {
                     next_up.time = next_call;
-                    self.next_up_qu.push(next_up);
+                    self.next_up_heap.push(next_up);
                 } else {
-                    self.task.remove(&next_up.key);
+                    self.task_map.remove(&next_up.key);
                 }
             }
         }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct AsyncScheduler<R> {
-    runtime: R,
-    next_id: AtomicU64,
-    running: AtomicBool,
-}
-
-pub enum Signal<R> {
-    AddTask(TaskUid, Task<R>),
-    DeleteTask(TaskUid),
-    Execute,
-    Quit,
-}
-
-pub trait AsyncRuntime: Clone {
-    fn spawn<F>(&self, task: F)
-    where
-        F: Future<Output = ()> + Send + 'static;
-    fn send_signal(&self, signal: Signal<Self>);
-    fn recv_signal(&self) -> impl Future<Output = Signal<Self>> + Send;
-    fn sleep(&self, duration: std::time::Duration) -> impl Future<Output = ()> + Send;
-}
-
-impl<R> AsyncScheduler<R>
-where
-    R: AsyncRuntime + Send + 'static,
-{
-    pub fn new(runtime: R) -> Self {
-        Self {
-            next_id: AtomicU64::new(0),
-            running: AtomicBool::new(false),
-            runtime,
-        }
-    }
-    pub fn start(&self) {
-        if self.is_running() {
-            return;
-        }
-        let main_loop_runtime = self.runtime.clone();
-        self.running.store(true, sync::atomic::Ordering::SeqCst);
-        self.runtime.spawn(async move {
-            let mut scheduler = Scheduler::new(main_loop_runtime.clone());
-            loop {
-                let signal = main_loop_runtime.recv_signal().await;
-                match signal {
-                    Signal::AddTask(key, task) => {
-                        scheduler.add_task(key, task);
-                    }
-                    Signal::DeleteTask(key) => {
-                        scheduler.delete_task(key);
-                    }
-                    Signal::Execute => {
-                        scheduler.execute();
-                    }
-                    Signal::Quit => {
-                        break;
-                    }
-                }
-            }
-        });
-    }
-    #[inline]
-    fn send_signal(&self, signal: Signal<R>) {
-        self.runtime.send_signal(signal);
-    }
-    pub fn add_task(&self, task: Task<R>) -> TaskUid {
-        let id = TaskUid(self.next_id.fetch_add(1, sync::atomic::Ordering::SeqCst));
-        self.send_signal(Signal::AddTask(id, task));
-        id
-    }
-    pub fn delete_task(&self, key: TaskUid) {
-        self.send_signal(Signal::DeleteTask(key));
-    }
-    pub fn execute(&self) {
-        self.send_signal(Signal::Execute);
-    }
-    pub fn quit(self) {
-        if self.is_running() {
-            self.send_signal(Signal::Quit);
-            self.running.store(false, sync::atomic::Ordering::SeqCst);
-        }
-    }
-    #[inline]
-    pub fn is_running(&self) -> bool {
-        self.running.load(sync::atomic::Ordering::SeqCst)
     }
 }

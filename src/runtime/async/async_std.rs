@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use super::{AsyncRuntime, AsyncScheduler, Signal};
 use async_std::sync::Mutex;
 
-use crate::{AsyncRuntime, AsyncScheduler, Signal};
 #[derive(Debug, Clone)]
 pub struct AsyncStd {
     pub signal_sender: Arc<async_std::channel::Sender<Signal<Self>>>,
@@ -30,10 +30,6 @@ impl AsyncRuntime for AsyncStd {
             .recv()
             .await
             .expect("fail to recv signal")
-    }
-
-    fn sleep(&self, duration: std::time::Duration) -> impl std::future::Future<Output = ()> {
-        async_std::task::sleep(duration)
     }
 }
 
