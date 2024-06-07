@@ -26,10 +26,3 @@ impl IntoSchedule for Dtu {
         Once::new(self)
     }
 }
-
-impl IntoSchedule for Once {
-    type Output = Once;
-    fn into_schedule(self) -> Self::Output {
-        self
-    }
-}

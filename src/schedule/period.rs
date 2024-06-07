@@ -1,7 +1,7 @@
-use chrono::{DateTime, DurationRound, TimeDelta, Utc};
+use chrono::{TimeDelta, Utc};
 
 use crate::{Dtu, IntoSchedule, Schedule};
-
+#[derive(Debug, Clone)]
 pub struct Period {
     period: TimeDelta,
     next: Dtu,
@@ -43,9 +43,11 @@ fn time_mod(x: TimeDelta, p: TimeDelta) -> TimeDelta {
         return TimeDelta::new(secs, nanos).expect("invalid time delta");
     }
     let q_0 = s_x / (s_p + 1);
-    let s_r = s_x % (s_p + 1) - (n_p * q_0) / NANOS_PER_SEC;
-    let n_r = n_x % n_p + ((NANOS_PER_SEC % n_p) * ((s_r) % n_p) % n_p);
-    let x = TimeDelta::new(s_r, n_r as u32).expect("invalid time delta");
+    let s_r = (s_x % (s_p + 1)) + ((n_p * q_0) / NANOS_PER_SEC);
+    let n_r = n_x % n_p + ((NANOS_PER_SEC % n_p) * (s_r % n_p) % n_p);
+    let x = TimeDelta::new(s_r, n_r as u32)
+        .ok_or((s_r, n_r))
+        .expect("invalid time delta");
     time_mod(x, p)
 }
 impl Schedule for Period {
@@ -66,8 +68,8 @@ impl Schedule for Period {
                 self.next += self.period;
                 return;
             }
-
-            todo!()
+            let rest = time_mod(diff, self.period);
+            self.next = dtu + self.period - rest;
         }
     }
 }
@@ -79,17 +81,23 @@ impl IntoSchedule for TimeDelta {
     }
 }
 
-impl IntoSchedule for Period {
-    type Output = Period;
-    fn into_schedule(self) -> Self::Output {
-        self
-    }
-}
+
 
 #[test]
 fn test_forward() {
     let now = Utc::now();
     let mut period = Period::new(TimeDelta::days(10), now);
     period.forward(now + TimeDelta::days(7));
-    assert_eq!(period.next(), Utc::now() + TimeDelta::days(10));
+    assert_eq!(
+        chrono::DurationRound::duration_round(period.next(), TimeDelta::milliseconds(1)).unwrap(),
+        chrono::DurationRound::duration_round(
+            Utc::now() + TimeDelta::days(10),
+            TimeDelta::milliseconds(1)
+        )
+        .unwrap()
+    );
+
+    let mut period = Period::new(TimeDelta::new(30, 30_123_456).unwrap(), now);
+    period.forward(now + TimeDelta::days(1));
+    println!("now:{now}, {:?}", period);
 }

@@ -38,6 +38,13 @@ pub trait IntoSchedule {
     fn into_schedule(self) -> Self::Output;
 }
 
+impl<S: Schedule> IntoSchedule for S {
+    type Output = S;
+
+    fn into_schedule(self) -> Self::Output {
+        self
+    }
+}
 pub struct MergedSchedule<S0, S1>(S0, S1);
 impl<S0, S1> Schedule for MergedSchedule<S0, S1>
 where
