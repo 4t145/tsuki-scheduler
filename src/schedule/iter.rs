@@ -4,7 +4,7 @@ use super::{IntoSchedule, Schedule};
 use crate::Dtu;
 
 /// A schedule that iterates over a sorted list of `Dtu`s.
-/// 
+///
 /// # Warning
 /// please ensure that the list of `Dtu`s is sorted.
 pub struct Iter<I: Iterator<Item = Dtu>> {

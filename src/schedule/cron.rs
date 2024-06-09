@@ -4,7 +4,6 @@ use chrono::{DateTime, Local, Utc};
 use cron::OwnedScheduleIterator;
 use std::{iter::Peekable, str::FromStr};
 
-
 /// A schedule that uses a cron expression to determine when to run a task.
 pub struct Cron<Z: chrono::offset::TimeZone> {
     iterator: Peekable<OwnedScheduleIterator<Z>>,

@@ -1,7 +1,6 @@
 use super::Schedule;
 use crate::Dtu;
 
-
 /// Combines two schedules into one that runs when one of the schedules is ready.
 pub struct Or<S0, S1>(pub S0, pub S1);
 impl<S0, S1> Schedule for Or<S0, S1>

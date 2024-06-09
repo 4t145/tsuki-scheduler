@@ -4,9 +4,9 @@ use crate::schedule::IntoSchedule;
 use crate::{Runtime, Task};
 
 /// Tokio runtime.
-/// 
+///
 /// The task is spawned using [`tokio::task::spawn`].
-/// 
+///
 /// # Create a new task
 /// see [`Task::tokio`]
 #[derive(Debug, Default)]
@@ -24,7 +24,7 @@ impl Tokio {
 
 impl Task<Tokio> {
     /// Create a new task that will be executed with tokio.
-    /// 
+    ///
     /// # Example
     /// ```
     /// # use tsuki_scheduler::prelude::*;

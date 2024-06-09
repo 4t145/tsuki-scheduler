@@ -1,29 +1,27 @@
 use crate::Dtu;
 
 mod after;
-pub use after::*; 
+pub use after::*;
 mod or;
-pub use or::*; 
+pub use or::*;
 mod before;
-pub use before::*; 
+pub use before::*;
 #[cfg(feature = "cron")]
 mod cron;
 #[cfg(feature = "cron")]
-pub use cron::*; 
+pub use cron::*;
 mod iter;
-pub use iter::*; 
+pub use iter::*;
 mod once;
-pub use once::*; 
+pub use once::*;
 mod period;
-pub use period::*; 
+pub use period::*;
 
 pub trait Schedule {
     fn peek_next(&mut self) -> Option<Dtu>;
     fn next(&mut self) -> Option<Dtu>;
     fn forward(&mut self, dtu: Dtu);
 }
-
-
 
 pub fn forward_default<S: Schedule>(schedule: &mut S, dtu: Dtu) {
     while let Some(next) = schedule.peek_next() {

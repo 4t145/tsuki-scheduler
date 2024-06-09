@@ -6,9 +6,9 @@ use crate::{Runtime, Task};
 use async_std::task::JoinHandle;
 
 /// AsyncStd runtime.
-/// 
+///
 /// The task is spawned using [`async_std::task::spawn`].
-/// 
+///
 /// # Create a new task
 /// see [`Task::async_std`]
 #[derive(Debug, Default)]
@@ -25,9 +25,8 @@ impl AsyncStd {
 }
 
 impl Task<AsyncStd> {
-
     /// Create a new task that will be executed with async_std.
-    /// 
+    ///
     /// # Example
     /// ```
     /// # use tsuki_scheduler::prelude::*;
