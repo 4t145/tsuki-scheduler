@@ -54,3 +54,13 @@ You may ignore all the task handles, if you want to manage the handles, implemen
 
 ### Async runtime
 In a async runtime, you may spawn a task for scheduler to execute periodically driven by event loop, you can check the [example](examples/tokio.rs) for tokio runtime.
+
+## Feature flags
+|flag|description|
+|:---|:----------|
+|uuid|allow to create TaskUid by uuid-v4 |
+|cron|allow to create a schedule described by a cron expression |
+|tokio|enable tokio runtime |
+|async_std|enable async_std runtime |
+|thread|enable thread runtime |
+|wasm|enable wasm runtime |
