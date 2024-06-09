@@ -5,6 +5,8 @@ on:
     branches: ["release"]
   pull_request:
     branches: ["release"]
+  release:
+    types: [created]
 
 env:
   CARGO_TERM_COLOR: always
