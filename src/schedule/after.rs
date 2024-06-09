@@ -1,5 +1,7 @@
-use crate::{Dtu, Schedule};
+use super::Schedule;
+use crate::Dtu;
 
+/// A wrapper around a schedule that only allows the task to run after a certain time.
 pub struct After<S> {
     after: Dtu,
     inner: S,

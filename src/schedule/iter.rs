@@ -1,7 +1,12 @@
 use std::iter::Peekable;
 
-use crate::{Dtu, IntoSchedule, Schedule};
+use super::{IntoSchedule, Schedule};
+use crate::Dtu;
 
+/// A schedule that iterates over a sorted list of `Dtu`s.
+/// 
+/// # Warning
+/// please ensure that the list of `Dtu`s is sorted.
 pub struct Iter<I: Iterator<Item = Dtu>> {
     inner: Peekable<I>,
 }
@@ -25,7 +30,7 @@ where
     }
 
     fn forward(&mut self, dtu: Dtu) {
-        crate::forward_default(self, dtu)
+        super::forward_default(self, dtu)
     }
 }
 

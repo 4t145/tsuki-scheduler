@@ -1,22 +1,61 @@
-use crate::Schedule;
+use crate::Dtu;
 
-pub mod after;
-pub mod and;
-pub mod before;
+mod after;
+pub use after::*; 
+mod or;
+pub use or::*; 
+mod before;
+pub use before::*; 
 #[cfg(feature = "cron")]
-pub mod cron;
-pub mod iter;
-pub mod once;
-pub mod period;
+mod cron;
+#[cfg(feature = "cron")]
+pub use cron::*; 
+mod iter;
+pub use iter::*; 
+mod once;
+pub use once::*; 
+mod period;
+pub use period::*; 
 
-pub trait ScheduleExt: Schedule + Sized {
-    fn and<S: Schedule>(self, other: S) -> and::And<Self, S> {
-        and::And::new(self, other)
+pub trait Schedule {
+    fn peek_next(&mut self) -> Option<Dtu>;
+    fn next(&mut self) -> Option<Dtu>;
+    fn forward(&mut self, dtu: Dtu);
+}
+
+
+
+pub fn forward_default<S: Schedule>(schedule: &mut S, dtu: Dtu) {
+    while let Some(next) = schedule.peek_next() {
+        if next > dtu {
+            break;
+        }
+        schedule.next();
     }
-    fn after(self, time: crate::Dtu) -> after::After<Self> {
+}
+
+pub trait IntoSchedule {
+    type Output: Schedule;
+    fn into_schedule(self) -> Self::Output;
+}
+
+impl<S: Schedule> IntoSchedule for S {
+    type Output = S;
+
+    fn into_schedule(self) -> Self::Output {
+        self
+    }
+}
+
+/// shortcuts for creating combined schedules
+pub trait ScheduleExt: Schedule + Sized {
+    fn or<S: Schedule>(self, other: S) -> Or<Self, S> {
+        or::Or::new(self, other)
+    }
+    fn after(self, time: crate::Dtu) -> After<Self> {
         after::After::new(time, self)
     }
-    fn before(self, time: crate::Dtu) -> before::Before<Self> {
+    fn before(self, time: crate::Dtu) -> Before<Self> {
         before::Before::new(time, self)
     }
 }

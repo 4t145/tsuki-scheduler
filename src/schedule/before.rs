@@ -1,7 +1,8 @@
+use super::Schedule;
+use crate::Dtu;
 use chrono::Utc;
 
-use crate::{Dtu, Schedule};
-
+/// A wrapper around a schedule that only allows the task to run before a certain time.
 pub struct Before<S> {
     before: Dtu,
     inner: S,

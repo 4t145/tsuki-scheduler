@@ -1,42 +1,26 @@
-use std::{
-    sync::{Arc, Mutex},
-    thread::JoinHandle,
-};
+use std::thread::JoinHandle;
 
-use crate::{IntoSchedule, Task};
+use crate::schedule::IntoSchedule;
+use crate::{Runtime, Task};
+
+/// thread based runtime
+/// # Errors
+/// if system hasn't enough resource to create new thread, a io::Error will be returned.
 #[derive(Debug, Clone, Default)]
-pub struct ThreadRuntime {
-    inner: Arc<Mutex<Inner>>,
-}
-impl ThreadRuntime {
+pub struct Thread;
+
+impl Thread {
     pub fn new() -> Self {
-        ThreadRuntime::default()
-    }
-    pub fn push_handle(&self, handle: JoinHandle<()>) {
-        self.inner.lock().expect("poisoned").push_handle(handle)
-    }
-    pub fn join_all(&self) {
-        self.inner.lock().expect("poisoned").join_all()
+        Thread
     }
 }
 
-#[derive(Debug, Default)]
-struct Inner {
-    tasks: Vec<JoinHandle<()>>,
-}
-impl Inner {
-    fn push_handle(&mut self, handle: JoinHandle<()>) {
-        self.tasks.push(handle)
-    }
-    fn join_all(&mut self) {
-        for task in self.tasks.drain(..) {
-            let _ = task.join();
-        }
-    }
+impl Runtime for Thread {
+    type Handle = std::io::Result<JoinHandle<()>>;
 }
 
-impl Task<ThreadRuntime> {
-    pub fn by_spawn<S, F>(schedule: S, task: F) -> Self
+impl Task<Thread> {
+    pub fn thread<S, F>(schedule: S, task: F) -> Self
     where
         S: IntoSchedule,
         S::Output: 'static + Send,
@@ -44,9 +28,10 @@ impl Task<ThreadRuntime> {
     {
         Task {
             schedule: Box::new(schedule.into_schedule()),
-            run: Box::new(move |runtime: &ThreadRuntime| {
-                let handle = std::thread::spawn(task.clone());
-                runtime.push_handle(handle)
+            run: Box::new(move |_: _, task_run: _| {
+                std::thread::Builder::new()
+                    .name(task_run.to_string())
+                    .spawn(task.clone())
             }),
         }
     }
@@ -55,7 +40,8 @@ impl Task<ThreadRuntime> {
 #[test]
 fn test_thread_schedule() {
     use std::sync::atomic::{AtomicUsize, Ordering};
-    let mut scheduler = crate::Scheduler::new(ThreadRuntime::new());
+    use std::sync::Arc;
+    let mut scheduler = crate::Scheduler::new(Thread::new()).with_handle_manager(vec![]);
     let now = chrono::Utc::now();
     let first_call = now + chrono::TimeDelta::seconds(1);
     let second_call = now + chrono::TimeDelta::seconds(2);
@@ -75,17 +61,19 @@ fn test_thread_schedule() {
     };
     scheduler.add_task(
         crate::TaskUid(0),
-        Task::<ThreadRuntime>::by_spawn(Some(first_call), task_0),
+        Task::<Thread>::thread(Some(first_call), task_0),
     );
     scheduler.add_task(
         crate::TaskUid(1),
-        Task::<ThreadRuntime>::by_spawn([first_call, second_call], task_1),
+        Task::<Thread>::thread([first_call, second_call], task_1),
     );
     std::thread::sleep(std::time::Duration::from_secs(1));
     scheduler.execute_by_now();
     std::thread::sleep(std::time::Duration::from_secs(1));
     scheduler.execute_by_now();
-    scheduler.runtime().join_all();
+    for task in scheduler.handle_manager.into_iter().flatten() {
+        task.join().expect("fail to join thread");
+    }
     assert_eq!(task_0_run_count.load(Ordering::SeqCst), 1);
     assert_eq!(task_1_run_count.load(Ordering::SeqCst), 2);
 }

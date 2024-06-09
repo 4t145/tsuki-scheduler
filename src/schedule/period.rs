@@ -1,6 +1,9 @@
 use chrono::{TimeDelta, Utc};
 
-use crate::{Dtu, IntoSchedule, Schedule};
+use super::{IntoSchedule, Schedule};
+use crate::Dtu;
+
+/// A schedule that runs at a fixed interval.
 #[derive(Debug, Clone)]
 pub struct Period {
     period: TimeDelta,

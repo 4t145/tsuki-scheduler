@@ -1,5 +1,8 @@
-use crate::{Dtu, IntoSchedule, Schedule};
+use crate::Dtu;
 
+use super::{IntoSchedule, Schedule};
+
+/// A schedule that only allows the task to run once.
 pub struct Once {
     pub(crate) next: Option<Dtu>,
 }
@@ -20,7 +23,7 @@ impl Schedule for Once {
     }
 
     fn forward(&mut self, dtu: Dtu) {
-        crate::forward_default(self, dtu)
+        super::forward_default(self, dtu)
     }
 }
 

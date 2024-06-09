@@ -3,10 +3,13 @@
         "tokio",
         "async-std",
         "cron",
+        "wasm",
+        "uuid",
         "thread"
     ],
     "cSpell.words": [
         "Chrono",
+        "combinators",
         "NANOS",
         "peekable",
         "subsec"

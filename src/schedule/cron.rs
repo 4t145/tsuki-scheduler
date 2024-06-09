@@ -1,8 +1,11 @@
-use std::{iter::Peekable, str::FromStr};
-use crate::{Dtu, IntoSchedule, Schedule};
-use chrono::{Local, Utc};
+use super::{IntoSchedule, Schedule};
+use crate::Dtu;
+use chrono::{DateTime, Local, Utc};
 use cron::OwnedScheduleIterator;
+use std::{iter::Peekable, str::FromStr};
 
+
+/// A schedule that uses a cron expression to determine when to run a task.
 pub struct Cron<Z: chrono::offset::TimeZone> {
     iterator: Peekable<OwnedScheduleIterator<Z>>,
     schedule: cron::Schedule,
@@ -10,6 +13,7 @@ pub struct Cron<Z: chrono::offset::TimeZone> {
 }
 
 impl<Z: chrono::offset::TimeZone> Cron<Z> {
+    /// Create a new cron schedule from a cron expression and timezone.
     pub fn from_cron_schedule(schedule: cron::Schedule, timezone: Z) -> Self {
         Cron {
             schedule: schedule.clone(),
@@ -21,6 +25,7 @@ impl<Z: chrono::offset::TimeZone> Cron<Z> {
 }
 
 impl Cron<Utc> {
+    /// Create a new cron schedule from a cron expression in UTC.
     pub fn utc_from_cron_expr(expr: &str) -> Result<Self, cron::error::Error> {
         let schedule = cron::Schedule::from_str(expr)?;
         Ok(Self::from_cron_schedule(schedule, Utc))
@@ -28,19 +33,20 @@ impl Cron<Utc> {
 }
 
 impl Cron<Local> {
+    /// Create a new cron schedule from a cron expression in the local timezone.
     pub fn local_from_cron_expr(expr: &str) -> Result<Self, cron::error::Error> {
         let schedule = cron::Schedule::from_str(expr)?;
         Ok(Self::from_cron_schedule(schedule, Local))
     }
 }
 
-impl Schedule for Cron<chrono::Utc> {
+impl<Z: chrono::offset::TimeZone> Schedule for Cron<Z> {
     fn peek_next(&mut self) -> Option<Dtu> {
-        self.iterator.peek().copied()
+        self.iterator.peek().map(DateTime::to_utc)
     }
 
     fn next(&mut self) -> Option<Dtu> {
-        self.iterator.next()
+        self.iterator.next().as_ref().map(DateTime::to_utc)
     }
 
     fn forward(&mut self, dtu: Dtu) {

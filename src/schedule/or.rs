@@ -1,7 +1,10 @@
-use crate::{Dtu, Schedule};
+use super::Schedule;
+use crate::Dtu;
 
-pub struct And<S0, S1>(pub S0, pub S1);
-impl<S0, S1> Schedule for And<S0, S1>
+
+/// Combines two schedules into one that runs when one of the schedules is ready.
+pub struct Or<S0, S1>(pub S0, pub S1);
+impl<S0, S1> Schedule for Or<S0, S1>
 where
     S0: Schedule,
     S1: Schedule,
@@ -42,7 +45,7 @@ where
     }
 }
 
-impl<S0, S1> And<S0, S1> {
+impl<S0, S1> Or<S0, S1> {
     #[inline]
     pub fn new(s0: S0, s1: S1) -> Self {
         Self(s0, s1)
