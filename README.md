@@ -1,4 +1,6 @@
 # Tsuki-Scheduler
+![Crates.io Version](https://img.shields.io/crates/v/tsuki-scheduler)
+
 A simple, light wight, composable and extensible scheduler for every runtime.
 ```
 Scheduler = Schedule × Runtime
@@ -24,6 +26,15 @@ with a combination of
 
 For a more detailed document, check the [rust doc](https://docs.rs/tsuki-scheduler).
 
+```shell
+cargo add tsuki-scheduler
+```
+
+or 
+
+```toml
+tsuki-scheduler = "0.1"
+```
 ### Create scheduler
 ```rust
 use tsuki_scheduler::prelude::*;
