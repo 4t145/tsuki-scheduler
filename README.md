@@ -1,5 +1,5 @@
 # Tsuki-Scheduler
-![Crates.io Version](https://img.shields.io/crates/v/tsuki-scheduler)
+[![Crates.io Version](https://img.shields.io/crates/v/tsuki-scheduler)](https://crates.io/crates/tsuki-scheduler)
 
 A simple, light wight, composable and extensible scheduler for every runtime.
 ```
