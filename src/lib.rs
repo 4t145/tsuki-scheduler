@@ -153,7 +153,8 @@ impl<R: Runtime, H> Scheduler<R, H> {
     /// ```
     /// # use tsuki_scheduler::prelude::*;
     /// // use a vector to collect handles
-    /// let scheduler = Scheduler::new(Thread::new()).with_handle_manager(vec![]);
+    /// let handles: Vec<<Thread as Runtime>::Handle> = vec![];
+    /// let scheduler = Scheduler::new(Thread::new()).with_handle_manager(handles);
     /// ```
     pub fn with_handle_manager<H2>(self, handle_manager: H2) -> Scheduler<R, H2> {
         Scheduler {
