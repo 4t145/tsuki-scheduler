@@ -10,24 +10,24 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build
         run: cargo build --verbose
-      - name: Run tests
-        run: cargo test --verbose
-
-  check:
-    needs: test
-    if: github.event_name == 'release' && github.event.action == 'created'
-    runs-on: ubuntu-latest
-    steps:
       - name: Run clippy
         run: cargo clippy --all-features
       - name: Run fmt
         run: cargo fmt --all -- --check
+      - name: Run tests
+        run: cargo test --verbose
+
+  release:
+    needs: check
+    if: github.event_name == 'release' && github.event.action == 'created'
+    runs-on: ubuntu-latest
+    steps:
       - name: publish dry run
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }} --dry-run
       - name: publish
