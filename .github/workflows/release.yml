@@ -30,7 +30,9 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'created'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: publish dry run
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }} --dry-run
       - name: publish
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+        
