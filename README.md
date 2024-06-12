@@ -12,8 +12,9 @@ This small crate can help you running tasks in
 
 - tokio
 - async-std
-- thread
-- wasm (javascript promise)
+- new thread
+- local
+- promise
 - and more as long as the way to create a task in this runtime is implemented.
 
 with a combination of
@@ -40,7 +41,7 @@ tsuki-scheduler = "0.1"
 use tsuki_scheduler::prelude::*;
 let mut scheduler = Scheduler::new(Tokio);
 let mut scheduler = Scheduler::new(AsyncStd);
-let mut scheduler = Scheduler::new(Wasm);
+let mut scheduler = Scheduler::new(Promise);
 let mut scheduler = Scheduler::new(Thread);
 
 // or you may use the async wrapper

@@ -10,11 +10,15 @@ pub use tokio::*;
 mod thread;
 #[cfg(feature = "thread")]
 pub use thread::*;
-#[cfg(feature = "wasm")]
-mod wasm;
-#[cfg(feature = "wasm")]
-pub use wasm::*;
+#[cfg(feature = "promise")]
+mod promise;
+#[cfg(feature = "promise")]
+pub use promise::*;
+
+mod local;
+pub use local::*;
 
 pub trait Runtime {
     type Handle;
 }
+
