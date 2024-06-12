@@ -42,6 +42,10 @@ let mut scheduler = Scheduler::new(Tokio);
 let mut scheduler = Scheduler::new(AsyncStd);
 let mut scheduler = Scheduler::new(Wasm);
 let mut scheduler = Scheduler::new(Thread);
+
+// or you may use the async wrapper
+let mut scheduler_runner = AsyncSchedulerRunner::new(Tokio);
+let client = scheduler_runner.client();
 ```
 
 ### Add executes and delete tasks
