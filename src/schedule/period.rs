@@ -4,7 +4,7 @@ use super::{IntoSchedule, Schedule};
 use crate::Dtu;
 
 /// A schedule that runs at a fixed interval.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct Period {
     period: TimeDelta,
     next: Dtu,
@@ -64,7 +64,7 @@ impl Schedule for Period {
         Some(next)
     }
 
-    fn forward(&mut self, dtu: Dtu) {
+    fn forward_to(&mut self, dtu: Dtu) {
         if self.next < dtu {
             let diff = dtu - self.next;
             if diff < self.period {
@@ -88,7 +88,7 @@ impl IntoSchedule for TimeDelta {
 fn test_forward() {
     let now = Utc::now();
     let mut period = Period::new(TimeDelta::days(10), now);
-    period.forward(now + TimeDelta::days(7));
+    period.forward_to(now + TimeDelta::days(7));
     assert_eq!(
         chrono::DurationRound::duration_round(period.next(), TimeDelta::milliseconds(1)).unwrap(),
         chrono::DurationRound::duration_round(
@@ -99,6 +99,6 @@ fn test_forward() {
     );
 
     let mut period = Period::new(TimeDelta::new(30, 30_123_456).unwrap(), now);
-    period.forward(now + TimeDelta::days(1));
+    period.forward_to(now + TimeDelta::days(1));
     println!("now:{now}, {:?}", period);
 }

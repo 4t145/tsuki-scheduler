@@ -37,9 +37,9 @@ impl Task<AsyncStd> {
     pub fn async_std<S, F, Fut>(schedule: S, task: F) -> Self
     where
         S: IntoSchedule,
-        S::Output: 'static + Send,
-        F: Fn() -> Fut + 'static + Send,
-        Fut: Future<Output = ()> + 'static + Send,
+        S::Output: Send + 'static,
+        F: Fn() -> Fut + Send + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
     {
         Task {
             schedule: Box::new(schedule.into_schedule()),

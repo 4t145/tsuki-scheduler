@@ -64,7 +64,7 @@ scheduler.delete_task(id);
 You may ignore all the task handles, if you want to manage the handles, implement your own manager by implementing the trait `HandleManager`.
 
 ### Async runtime
-In a async runtime, you may spawn a task for scheduler to execute periodically driven by event loop, you can check the [example](examples/tokio.rs) for tokio runtime.
+In a async runtime, you may spawn a task for scheduler to execute periodically driven by event loop. This crate provides an implementation, you can check the [example](examples/tokio.rs) for tokio runtime.
 
 ## Feature flags
 |flag|description|
@@ -75,3 +75,8 @@ In a async runtime, you may spawn a task for scheduler to execute periodically d
 |async_std|enable async_std runtime |
 |thread|enable thread runtime |
 |wasm|enable wasm runtime |
+|async-scheduler|a default async wrapper for async runtime|
+
+
+## Alternative crates
+* [`tokio-cron-scheduler`](https://github.com/mvniekerk/tokio-cron-scheduler)

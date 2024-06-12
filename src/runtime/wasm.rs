@@ -31,8 +31,8 @@ impl Task<Wasm> {
     pub fn promise<S, F, Fut>(schedule: S, task: F) -> Self
     where
         S: IntoSchedule,
-        S::Output: 'static + Send,
-        F: Fn() -> Fut + 'static + Send,
+        S::Output: Send + 'static,
+        F: Fn() -> Fut + Send + 'static,
         Fut: Future<Output = ()> + 'static,
     {
         Task {

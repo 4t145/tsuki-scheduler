@@ -3,9 +3,10 @@ use crate::Dtu;
 use chrono::Utc;
 
 /// A wrapper around a schedule that only allows the task to run before a certain time.
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct Before<S> {
-    before: Dtu,
-    inner: S,
+    pub before: Dtu,
+    pub inner: S,
 }
 
 impl<S: Schedule> Before<S> {
@@ -34,7 +35,7 @@ impl<S: Schedule> Schedule for Before<S> {
         self.inner.next()
     }
 
-    fn forward(&mut self, dtu: Dtu) {
-        self.inner.forward(dtu)
+    fn forward_to(&mut self, dtu: Dtu) {
+        self.inner.forward_to(dtu)
     }
 }

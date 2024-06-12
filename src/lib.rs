@@ -1,3 +1,7 @@
+#[cfg(feature = "async-scheduler")]
+mod async_scheduler;
+#[cfg(feature = "async-scheduler")]
+pub use async_scheduler::*;
 /// prelude for tsuki_scheduler
 pub mod prelude;
 use std::{
@@ -85,6 +89,20 @@ pub struct Scheduler<R: Runtime, H = ()> {
     pub handle_manager: H,
 }
 
+impl<R, H> Default for Scheduler<R, H>
+where
+    R: Runtime + Default,
+    H: Default,
+{
+    fn default() -> Self {
+        Self {
+            next_up_heap: BinaryHeap::new(),
+            task_map: HashMap::new(),
+            runtime: R::default(),
+            handle_manager: H::default(),
+        }
+    }
+}
 /// A single task running schedule
 #[derive(Debug, Clone)]
 pub struct TaskRun {

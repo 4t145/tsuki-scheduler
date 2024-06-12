@@ -8,61 +8,38 @@ pub enum Event {
 
 #[tokio::main]
 async fn main() {
-    let (event_tx, mut event_rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
-    let scheduler_task = tokio::spawn(async move {
-        let mut scheduler = Scheduler::new(Tokio).with_handle_manager(vec![]);
-        let mut interval = tokio::time::interval(std::time::Duration::from_millis(100));
-        loop {
-            tokio::select! {
-                _ = interval.tick() => {
-                    scheduler.execute_by_now();
-                }
-                event = event_rx.recv() => {
-                    match event {
-                        Some(Event::AddTask(id, task)) => {
-                            scheduler.add_task(id, task);
-                        }
-                        Some(Event::RemoveTask(uid)) => {
-                            scheduler.delete_task(uid);
-                        }
-                        Some(Event::Stop) => {
-                            break;
-                        }
-                        None => {
-                            break;
-                        }
-                    }
-                }
-            }
+    let mut async_runner = AsyncSchedulerRunner::<Tokio, Vec<_>>::default();
+    let async_client = async_runner.client();
+    let runner_task = tokio::spawn(async move {
+        async_runner.run().await;
+        let handles = async_runner.scheduler.handle_manager;
+        for handle in handles {
+            handle.await.unwrap();
         }
-        scheduler.handle_manager
     });
-    let hello_tokio_task = Task::tokio(
-        Cron::local_from_cron_expr("*/3 * * * * *").unwrap(),
-        || async {
-            println!("Hello, tokio!");
-        },
-    );
     let tokio_task_id = TaskUid::uuid();
-    let hello_tsuki_task = Task::tokio(
-        Cron::local_from_cron_expr("*/2 * * * * *").unwrap(),
-        || async {
-            println!("Hello, tsuki!");
-        },
-    );
     let tsuki_task_id = TaskUid::uuid();
-    event_tx
-        .send(Event::AddTask(tokio_task_id, hello_tokio_task))
-        .unwrap();
-    event_tx
-        .send(Event::AddTask(tsuki_task_id, hello_tsuki_task))
-        .unwrap();
+    async_client.add_task(
+        tokio_task_id,
+        Task::tokio(
+            Cron::local_from_cron_expr("*/2 * * * * *").unwrap(),
+            || async {
+                println!("Hello, tsuki!");
+            },
+        ),
+    );
+    async_client.add_task(
+        tsuki_task_id,
+        Task::tokio(
+            Cron::local_from_cron_expr("*/3 * * * * *").unwrap(),
+            || async {
+                println!("Hello, tokio!");
+            },
+        ),
+    );
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-    event_tx.send(Event::RemoveTask(tokio_task_id)).unwrap();
+    async_client.remove_task(tokio_task_id);
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-    event_tx.send(Event::Stop).unwrap();
-    let handles = scheduler_task.await.unwrap();
-    for handle in handles {
-        handle.await.unwrap();
-    }
+    async_client.stop();
+    runner_task.await.unwrap();
 }

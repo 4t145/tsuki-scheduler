@@ -23,8 +23,8 @@ impl Task<Thread> {
     pub fn thread<S, F>(schedule: S, task: F) -> Self
     where
         S: IntoSchedule,
-        S::Output: 'static + Send,
-        F: Fn() + 'static + Send + Clone,
+        S::Output: Send + 'static,
+        F: Fn() + Send + 'static + Clone,
     {
         Task {
             schedule: Box::new(schedule.into_schedule()),

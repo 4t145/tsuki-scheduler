@@ -19,6 +19,7 @@ wasm-bindgen = { version = "0.2.92", optional = true }
 uuid = { version = "1.8", optional = true }
 
 [features]
+async-scheduler = ["tokio?/time"]
 default = ["uuid"]
 thread = []
 uuid = ["dep:uuid", "uuid/v4"]
@@ -30,5 +31,4 @@ wasm-bindgen-futures = ["dep:wasm-bindgen-futures"]
 
 [[example]]
 name = "tokio"
-required-features = ["tokio", "cron", "tokio/full"]
-
+required-features = ["tokio", "cron", "tokio/full", "async-scheduler"]
