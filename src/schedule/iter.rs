@@ -7,6 +7,7 @@ use crate::Dtu;
 ///
 /// # Warning
 /// please ensure that the list of `Dtu`s is sorted.
+#[derive(Debug, Clone)]
 pub struct Iter<I: Iterator<Item = Dtu>> {
     inner: Peekable<I>,
 }
@@ -29,8 +30,8 @@ where
         self.inner.next()
     }
 
-    fn forward(&mut self, dtu: Dtu) {
-        super::forward_default(self, dtu)
+    fn forward_to(&mut self, dtu: Dtu) {
+        super::forward_to_default(self, dtu)
     }
 }
 

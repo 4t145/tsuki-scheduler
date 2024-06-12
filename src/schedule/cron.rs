@@ -11,6 +11,15 @@ pub struct Cron<Z: chrono::offset::TimeZone> {
     tz: Z,
 }
 
+impl<Z: chrono::offset::TimeZone + std::fmt::Debug> std::fmt::Debug for Cron<Z> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Cron")
+            .field("schedule", &self.schedule)
+            .field("tz", &self.tz)
+            .finish()
+    }
+}
+
 impl<Z: chrono::offset::TimeZone> Cron<Z> {
     /// Create a new cron schedule from a cron expression and timezone.
     pub fn from_cron_schedule(schedule: cron::Schedule, timezone: Z) -> Self {
@@ -48,7 +57,7 @@ impl<Z: chrono::offset::TimeZone> Schedule for Cron<Z> {
         self.iterator.next().as_ref().map(DateTime::to_utc)
     }
 
-    fn forward(&mut self, dtu: Dtu) {
+    fn forward_to(&mut self, dtu: Dtu) {
         self.iterator =
             OwnedScheduleIterator::new(self.schedule.clone(), dtu.with_timezone(&self.tz))
                 .peekable()

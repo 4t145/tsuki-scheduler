@@ -3,9 +3,10 @@
         "tokio",
         "async-std",
         "cron",
-        "wasm",
         "uuid",
-        "thread"
+        "thread",
+        "async-scheduler",
+        "promise"
     ],
     "cSpell.words": [
         "Chrono",

@@ -1,6 +1,6 @@
 [package]
 name = "tsuki-scheduler"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["4t145<u4t145@163.com>"]
 description = "A simple, light wight, composable and extensible scheduler for every runtime."
@@ -19,10 +19,11 @@ wasm-bindgen = { version = "0.2.92", optional = true }
 uuid = { version = "1.8", optional = true }
 
 [features]
+async-scheduler = ["tokio?/time"]
 default = ["uuid"]
 thread = []
 uuid = ["dep:uuid", "uuid/v4"]
-wasm = ["wasm-bindgen-futures"]
+promise = ["wasm-bindgen-futures"]
 tokio = ["dep:tokio", "tokio/sync", "tokio/rt"]
 async-std = ["dep:async-std"]
 cron = ["dep:cron"]
@@ -30,5 +31,4 @@ wasm-bindgen-futures = ["dep:wasm-bindgen-futures"]
 
 [[example]]
 name = "tokio"
-required-features = ["tokio", "cron", "tokio/full"]
-
+required-features = ["tokio", "cron", "tokio/full", "async-scheduler"]

@@ -1,3 +1,7 @@
+#[cfg(feature = "async-scheduler")]
+mod async_scheduler;
+#[cfg(feature = "async-scheduler")]
+pub use async_scheduler::*;
 /// prelude for tsuki_scheduler
 pub mod prelude;
 use std::{
@@ -8,6 +12,7 @@ use std::{
 use handle_manager::HandleManager;
 use runtime::Runtime;
 use schedule::Schedule;
+/// alias for [`chrono::DateTime`] in [`chrono::Utc`] timezone
 pub type Dtu = chrono::DateTime<chrono::Utc>;
 /// Process the handlers of the tasks
 pub mod handle_manager;
@@ -85,6 +90,20 @@ pub struct Scheduler<R: Runtime, H = ()> {
     pub handle_manager: H,
 }
 
+impl<R, H> Default for Scheduler<R, H>
+where
+    R: Runtime + Default,
+    H: Default,
+{
+    fn default() -> Self {
+        Self {
+            next_up_heap: BinaryHeap::new(),
+            task_map: HashMap::new(),
+            runtime: R::default(),
+            handle_manager: H::default(),
+        }
+    }
+}
 /// A single task running schedule
 #[derive(Debug, Clone)]
 pub struct TaskRun {
@@ -210,6 +229,7 @@ impl<R: Runtime, H: HandleManager<R::Handle>> Scheduler<R, H> {
 }
 
 #[inline]
+/// a shortcut to call [`chrono::Utc::now()`]
 pub fn now() -> Dtu {
     chrono::Utc::now()
 }

@@ -6,6 +6,8 @@ mod or;
 pub use or::*;
 mod before;
 pub use before::*;
+mod then;
+pub use then::*;
 #[cfg(feature = "cron")]
 mod cron;
 #[cfg(feature = "cron")]
@@ -20,10 +22,10 @@ pub use period::*;
 pub trait Schedule {
     fn peek_next(&mut self) -> Option<Dtu>;
     fn next(&mut self) -> Option<Dtu>;
-    fn forward(&mut self, dtu: Dtu);
+    fn forward_to(&mut self, dtu: Dtu);
 }
 
-pub fn forward_default<S: Schedule>(schedule: &mut S, dtu: Dtu) {
+pub fn forward_to_default<S: Schedule>(schedule: &mut S, dtu: Dtu) {
     while let Some(next) = schedule.peek_next() {
         if next > dtu {
             break;
@@ -55,6 +57,9 @@ pub trait ScheduleExt: Schedule + Sized {
     }
     fn before(self, time: crate::Dtu) -> Before<Self> {
         before::Before::new(time, self)
+    }
+    fn then<S: Schedule>(self, then: S) -> Then<Self, S> {
+        then::Then::new(self, then)
     }
 }
 

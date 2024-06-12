@@ -2,6 +2,7 @@ use super::Schedule;
 use crate::Dtu;
 
 /// Combines two schedules into one that runs when one of the schedules is ready.
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct Or<S0, S1>(pub S0, pub S1);
 impl<S0, S1> Schedule for Or<S0, S1>
 where
@@ -38,9 +39,9 @@ where
             }
         }
     }
-    fn forward(&mut self, dtu: Dtu) {
-        self.0.forward(dtu);
-        self.1.forward(dtu);
+    fn forward_to(&mut self, dtu: Dtu) {
+        self.0.forward_to(dtu);
+        self.1.forward_to(dtu);
     }
 }
 

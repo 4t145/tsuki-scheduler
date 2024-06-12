@@ -3,8 +3,9 @@ use crate::Dtu;
 use super::{IntoSchedule, Schedule};
 
 /// A schedule that only allows the task to run once.
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct Once {
-    pub(crate) next: Option<Dtu>,
+    pub next: Option<Dtu>,
 }
 
 impl Once {
@@ -22,8 +23,8 @@ impl Schedule for Once {
         self.next.take()
     }
 
-    fn forward(&mut self, dtu: Dtu) {
-        super::forward_default(self, dtu)
+    fn forward_to(&mut self, dtu: Dtu) {
+        super::forward_to_default(self, dtu)
     }
 }
 
