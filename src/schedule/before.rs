@@ -1,6 +1,5 @@
 use super::Schedule;
 use crate::Dtu;
-use chrono::Utc;
 
 /// A wrapper around a schedule that only allows the task to run before a certain time.
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
@@ -20,18 +19,16 @@ impl<S: Schedule> Before<S> {
 
 impl<S: Schedule> Schedule for Before<S> {
     fn peek_next(&mut self) -> Option<Dtu> {
-        let now = Utc::now();
-        if now >= self.before {
-            return None;
+        let next = self.inner.peek_next()?;
+        if next >= self.before {
+            None
+        } else {
+            Some(next)
         }
-        self.inner.peek_next()
     }
 
     fn next(&mut self) -> Option<Dtu> {
-        let now = Utc::now();
-        if now >= self.before {
-            return None;
-        }
+        self.peek_next()?;
         self.inner.next()
     }
 
