@@ -12,6 +12,7 @@ use std::{
 use handle_manager::HandleManager;
 use runtime::Runtime;
 use schedule::Schedule;
+/// alias for [`chrono::DateTime`] in [`chrono::Utc`] timezone
 pub type Dtu = chrono::DateTime<chrono::Utc>;
 /// Process the handlers of the tasks
 pub mod handle_manager;
@@ -228,6 +229,7 @@ impl<R: Runtime, H: HandleManager<R::Handle>> Scheduler<R, H> {
 }
 
 #[inline]
+/// a shortcut to call [`chrono::Utc::now()`]
 pub fn now() -> Dtu {
     chrono::Utc::now()
 }

@@ -1,9 +1,10 @@
 use super::Schedule;
 
+/// A schedule that runs one schedule after another.
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct Then<F, T> {
-    firstly: F,
-    then: T,
+    pub firstly: F,
+    pub then: T,
 }
 
 impl<F, T> Then<F, T> {
