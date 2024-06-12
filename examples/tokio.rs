@@ -1,3 +1,4 @@
+use chrono::TimeDelta;
 use tsuki_scheduler::prelude::*;
 
 pub enum Event {
@@ -28,10 +29,15 @@ async fn main() {
             },
         ),
     );
+    let now = now();
     async_client.add_task(
         tsuki_task_id,
         Task::tokio(
-            Cron::local_from_cron_expr("*/3 * * * * *").unwrap(),
+            Cron::local_from_cron_expr("*/3 * * * * *")
+                .unwrap()
+                .after(now + TimeDelta::seconds(1))
+                .before(now + TimeDelta::seconds(6))
+                .then(Cron::local_from_cron_expr("*/1 * * * * *").unwrap()),
             || async {
                 println!("Hello, tokio!");
             },
