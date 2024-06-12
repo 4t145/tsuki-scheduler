@@ -91,7 +91,8 @@ fn test_forward() {
     let mut period = Period::new(TimeDelta::days(10), now);
     period.forward_to(now + TimeDelta::days(7));
     assert_eq!(
-        chrono::DurationRound::duration_round(period.get_next(), TimeDelta::milliseconds(1)).unwrap(),
+        chrono::DurationRound::duration_round(period.get_next(), TimeDelta::milliseconds(1))
+            .unwrap(),
         chrono::DurationRound::duration_round(
             Utc::now() + TimeDelta::days(10),
             TimeDelta::milliseconds(1)
