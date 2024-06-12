@@ -83,4 +83,3 @@ impl IntoSchedule for TimeDelta {
         Period::new(self, Utc::now())
     }
 }
-
