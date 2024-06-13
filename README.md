@@ -81,7 +81,7 @@ In a async runtime, you may spawn a task for scheduler to execute periodically d
 |tokio|enable tokio runtime |
 |async_std|enable async_std runtime |
 |thread|enable thread runtime |
-|wasm|enable wasm runtime |
+|promise|enable js promise runtime |
 |async-scheduler|a default async wrapper for async runtime|
 
 
