@@ -109,3 +109,17 @@ pub fn test_once() {
     assert_eq!(schedule.next(), Some(day_0));
     assert_eq!(schedule.next(), None);
 }
+
+#[test]
+pub fn test_throttling() {
+    let day_0 = now();
+    let delta = TimeDelta::days(1);
+    let schedule = Period::new(delta, day_0);
+    let schedule = Throttling::new(schedule, TimeDelta::days(2));
+    let mut schedule = schedule.into_schedule();
+    assert_eq!(schedule.next(), Some(day_0));
+    assert_eq!(schedule.next(), Some(day_0 + delta * 2));
+    assert_eq!(schedule.next(), Some(day_0 + delta * 4));
+    assert_eq!(schedule.next(), Some(day_0 + delta * 6));
+    assert_eq!(schedule.next(), Some(day_0 + delta * 8));
+}

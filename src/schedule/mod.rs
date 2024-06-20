@@ -1,5 +1,3 @@
-use crate::Dtu;
-
 mod after;
 pub use after::*;
 mod or;
@@ -18,6 +16,8 @@ mod once;
 pub use once::*;
 mod period;
 pub use period::*;
+mod throttling;
+pub use throttling::*;
 
 pub trait Schedule {
     fn peek_next(&mut self) -> Option<Dtu>;
@@ -60,6 +60,9 @@ pub trait ScheduleExt: Schedule + Sized {
     }
     fn then<S: Schedule>(self, then: S) -> Then<Self, S> {
         then::Then::new(self, then)
+    }
+    fn throttling(self, interval: chrono::TimeDelta) -> Throttling<Self> {
+        Throttling::new(self, interval)
     }
 }
 

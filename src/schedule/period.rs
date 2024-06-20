@@ -47,6 +47,9 @@ fn time_mod(x: TimeDelta, p: TimeDelta) -> TimeDelta {
     }
     let q_0 = s_x / (s_p + 1);
     let s_r = (s_x % (s_p + 1)) + ((n_p * q_0) / NANOS_PER_SEC);
+    if n_p == 0 {
+        return TimeDelta::new(s_r, n_x as u32).expect("invalid time delta");
+    }
     let n_r = n_x % n_p + ((NANOS_PER_SEC % n_p) * (s_r % n_p) % n_p);
     let x = TimeDelta::new(s_r, n_r as u32)
         .ok_or((s_r, n_r))
