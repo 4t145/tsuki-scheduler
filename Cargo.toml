@@ -1,6 +1,6 @@
 [package]
 name = "tsuki-scheduler"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["4t145<u4t145@163.com>"]
 description = "A simple, light wight, composable and extensible scheduler for every runtime."
@@ -17,8 +17,7 @@ chrono = { version = "0.4" }
 cron = { version = "0", optional = true }
 async-std = { version = "1", optional = true }
 tokio = { version = "1", optional = true }
-wasm-bindgen-futures = { version = "0.4.42", optional = true }
-wasm-bindgen = { version = "0.2.92", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
 uuid = { version = "1.8", optional = true }
 
 
