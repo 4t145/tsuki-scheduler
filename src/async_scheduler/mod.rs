@@ -1,7 +1,8 @@
 use std::{
     collections::VecDeque,
-    future::Future,
+    future::{Future, Pending},
     sync::{Arc, Mutex},
+    time::Duration,
 };
 const DEFAULT_EXECUTE_DURATION: std::time::Duration = std::time::Duration::from_millis(100);
 use crate::{handle_manager::HandleManager, runtime::Runtime, Scheduler, Task, TaskUid};
@@ -9,16 +10,15 @@ use crate::{handle_manager::HandleManager, runtime::Runtime, Scheduler, Task, Ta
 mod async_std;
 #[cfg(feature = "tokio")]
 mod tokio;
-
-pub trait AsyncRuntime: Runtime {
-    fn sleep(&self, duration: std::time::Duration) -> impl Future<Output = ()>;
+pub trait AsyncRuntime: Runtime + Send + Sync {
+    /// wake runner after a duration
+    fn wake_after(&self, duration: Duration, ctx: &mut std::task::Context<'_>);
 }
 
 #[derive(Debug)]
 enum Event<R: Runtime> {
     AddTask(TaskUid, Task<R>),
     RemoveTask(TaskUid),
-    Stop,
 }
 
 /// A implementation of async scheduler runner
@@ -77,32 +77,19 @@ impl<R: AsyncRuntime, H: HandleManager<R::Handle>> AsyncSchedulerRunner<R, H> {
         }
     }
     /// start running
-    pub async fn run(&mut self) {
-        let mut local_event_queue = VecDeque::new();
-        loop {
-            self.scheduler.runtime.sleep(self.execute_duration).await;
-            {
-                let mut add_task_queue = self.event_queue.lock().expect("lock event queue failed");
-                std::mem::swap(&mut local_event_queue, &mut add_task_queue);
-            }
-            while let Some(evt) = local_event_queue.pop_front() {
-                match evt {
-                    Event::AddTask(key, task) => {
-                        self.scheduler.add_task(key, task);
-                    }
-                    Event::RemoveTask(key) => {
-                        self.scheduler.delete_task(key);
-                    }
-                    Event::Stop => {
-                        // restore the event queue
-                        let mut add_task_queue =
-                            self.event_queue.lock().expect("lock event queue failed");
-                        add_task_queue.extend(local_event_queue);
-                        return;
-                    }
-                }
-            }
-            self.scheduler.execute_by_now();
+    pub fn run(self) -> AsyncSchedulerRunning<R, H, Pending<()>> {
+        self.run_with_shutdown_signal(std::future::pending())
+    }
+
+    /// start running with shutdown signal
+    pub fn run_with_shutdown_signal<S>(self, shutdown_signal: S) -> AsyncSchedulerRunning<R, H, S>
+    where
+        S: Future<Output = ()> + Send,
+    {
+        AsyncSchedulerRunning {
+            runner: Some(self),
+            event_queue: VecDeque::new(),
+            shutdown_signal,
         }
     }
 }
@@ -137,9 +124,75 @@ impl<R: AsyncRuntime> AsyncSchedulerClient<R> {
         let mut queue = self.event_queue.lock().expect("lock event queue failed");
         queue.push_back(Event::RemoveTask(key));
     }
-    /// stop the scheduler, if this method is called, the tasks in the queue will not be executed in next loop, and the scheduler will stop.
-    pub fn stop(&self) {
-        let mut queue = self.event_queue.lock().expect("lock event queue failed");
-        queue.push_back(Event::Stop);
+}
+
+pub struct AsyncSchedulerRunning<R, H, S>
+where
+    R: AsyncRuntime + Send,
+    H: HandleManager<R::Handle>,
+    S: Future<Output = ()> + Send,
+{
+    runner: Option<AsyncSchedulerRunner<R, H>>,
+    event_queue: VecDeque<Event<R>>,
+    shutdown_signal: S,
+}
+
+impl<R, H, S> Unpin for AsyncSchedulerRunning<R, H, S>
+where
+    R: AsyncRuntime,
+    H: HandleManager<R::Handle>,
+    S: Future<Output = ()> + Unpin + Send,
+{
+}
+impl<R, H, S> Future for AsyncSchedulerRunning<R, H, S>
+where
+    R: AsyncRuntime,
+    H: HandleManager<R::Handle>,
+    S: Future<Output = ()> + Unpin + Send,
+{
+    type Output = AsyncSchedulerRunner<R, H>;
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        let this = self.get_mut();
+        let shutdown_signal = std::pin::pin!(&mut this.shutdown_signal);
+        match shutdown_signal.poll(cx) {
+            std::task::Poll::Ready(_) => {
+                let runner = this.runner.take().expect("missing runner");
+                {
+                    let mut add_task_queue =
+                        runner.event_queue.lock().expect("lock event queue failed");
+                    while let Some(event) = this.event_queue.pop_back() {
+                        add_task_queue.push_front(event)
+                    }
+                }
+                std::task::Poll::Ready(runner)
+            }
+            std::task::Poll::Pending => {
+                let runner = this.runner.as_mut().expect("missing runner");
+                {
+                    let mut add_task_queue =
+                        runner.event_queue.lock().expect("lock event queue failed");
+                    std::mem::swap(&mut this.event_queue, &mut add_task_queue);
+                }
+                while let Some(evt) = this.event_queue.pop_front() {
+                    match evt {
+                        Event::AddTask(key, task) => {
+                            runner.scheduler.add_task(key, task);
+                        }
+                        Event::RemoveTask(key) => {
+                            runner.scheduler.delete_task(key);
+                        }
+                    }
+                }
+                runner.scheduler.execute_by_now();
+                runner
+                    .scheduler
+                    .runtime
+                    .wake_after(runner.execute_duration, cx);
+                std::task::Poll::Pending
+            }
+        }
     }
 }
