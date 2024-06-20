@@ -9,15 +9,11 @@ pub enum Event {
 
 #[tokio::main]
 async fn main() {
-    let mut async_runner = AsyncSchedulerRunner::<Tokio, Vec<_>>::default();
+    let async_runner = AsyncSchedulerRunner::<Tokio, Vec<_>>::default();
     let async_client = async_runner.client();
-    let runner_task = tokio::spawn(async move {
-        async_runner.run().await;
-        let handles = async_runner.scheduler.handle_manager;
-        for handle in handles {
-            handle.await.unwrap();
-        }
-    });
+    let shutdown_signal = Box::pin(tokio::time::sleep(std::time::Duration::from_secs(10)));
+    let running_handle = tokio::spawn(async_runner.run_with_shutdown_signal(shutdown_signal));
+
     let tokio_task_id = TaskUid::uuid();
     let tsuki_task_id = TaskUid::uuid();
     async_client.add_task(
@@ -46,6 +42,8 @@ async fn main() {
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     async_client.remove_task(tokio_task_id);
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-    async_client.stop();
-    runner_task.await.unwrap();
+    let runner = running_handle.await.unwrap();
+    for task in runner.scheduler.handle_manager {
+        task.await.unwrap();
+    }
 }

@@ -1,9 +1,14 @@
+
 use crate::runtime::AsyncStd;
 
 use super::AsyncRuntime;
 
 impl AsyncRuntime for AsyncStd {
-    fn sleep(&self, duration: std::time::Duration) -> impl async_std::prelude::Future<Output = ()> {
-        async_std::task::sleep(duration)
+    fn wake_after(&self, duration: std::time::Duration, ctx: &mut std::task::Context<'_>) {
+        let waker = ctx.waker().clone();
+        async_std::task::spawn(async move {
+            async_std::task::sleep(duration).await;
+            waker.wake()
+        });
     }
 }
