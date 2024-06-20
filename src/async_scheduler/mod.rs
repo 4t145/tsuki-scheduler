@@ -10,8 +10,8 @@ use crate::{handle_manager::HandleManager, runtime::Runtime, Scheduler, Task, Ta
 mod async_std;
 #[cfg(feature = "tokio")]
 mod tokio;
-
 pub trait AsyncRuntime: Runtime + Send + Sync {
+    /// wake runner after a duration
     fn wake_after(&self, duration: Duration, ctx: &mut std::task::Context<'_>);
 }
 
@@ -135,14 +135,6 @@ where
     runner: Option<AsyncSchedulerRunner<R, H>>,
     event_queue: VecDeque<Event<R>>,
     shutdown_signal: S,
-}
-
-unsafe impl<R, H, S> Send for AsyncSchedulerRunning<R, H, S>
-where
-    R: AsyncRuntime + Send,
-    H: HandleManager<R::Handle> + Send,
-    S: Future<Output = ()> + Send,
-{
 }
 
 impl<R, H, S> Unpin for AsyncSchedulerRunning<R, H, S>

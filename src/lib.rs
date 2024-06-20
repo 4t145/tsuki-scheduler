@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![warn(clippy::unwrap_used, clippy::overflow_check_conditional)]
 #[cfg(feature = "async-scheduler")]
 mod async_scheduler;
 #[cfg(feature = "async-scheduler")]

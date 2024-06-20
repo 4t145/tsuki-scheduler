@@ -1,5 +1,4 @@
-
-use crate::runtime::AsyncStd;
+use crate::{runtime::AsyncStd, AsyncSchedulerRunner};
 
 use super::AsyncRuntime;
 
@@ -10,5 +9,11 @@ impl AsyncRuntime for AsyncStd {
             async_std::task::sleep(duration).await;
             waker.wake()
         });
+    }
+}
+
+impl AsyncSchedulerRunner<AsyncStd> {
+    pub fn async_std() -> Self {
+        Self::default()
     }
 }
