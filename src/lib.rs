@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #[cfg(feature = "async-scheduler")]
 mod async_scheduler;
 #[cfg(feature = "async-scheduler")]
