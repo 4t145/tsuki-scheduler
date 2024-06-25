@@ -25,7 +25,7 @@ pub trait Schedule: Send + 'static {
     fn forward_to(&mut self, dtu: Dtu);
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Never;
 
 impl Schedule for Never {
@@ -82,6 +82,9 @@ impl<S: Schedule> IntoSchedule for S {
 
 /// shortcuts for creating combined schedules
 pub trait ScheduleExt: Schedule + Sized {
+    fn builder(self) -> ScheduleBuilder<Self> {
+        ScheduleBuilder::new(self)
+    }
     fn or<S: Schedule>(self, other: S) -> Or<Self, S> {
         or::Or::new(self, other)
     }
@@ -122,3 +125,49 @@ pub trait ScheduleExt: Schedule + Sized {
 }
 
 impl<S> ScheduleExt for S where S: Schedule + Sized {}
+
+pub struct ScheduleBuilder<S>
+where
+    S: Schedule,
+{
+    schedule: S,
+}
+
+impl Default for ScheduleBuilder<Never> {
+    fn default() -> Self {
+        Self { schedule: Never }
+    }
+}
+
+impl<S0> ScheduleBuilder<S0>
+where
+    S0: Schedule,
+{
+    pub fn map<S1: Schedule>(self, map: impl FnOnce(S0) -> S1) -> ScheduleBuilder<S1> {
+        ScheduleBuilder::new(map(self.schedule))
+    }
+    pub fn new(schedule: S0) -> Self {
+        Self { schedule }
+    }
+    pub fn or<S1: Schedule>(self, other: S1) -> ScheduleBuilder<Or<S0, S1>> {
+        self.map(|this| this.or(other))
+    }
+    pub fn after(self, time: crate::Dtu) -> ScheduleBuilder<After<S0>> {
+        self.map(|this| this.after(time))
+    }
+    pub fn before(self, time: crate::Dtu) -> ScheduleBuilder<Before<S0>> {
+        self.map(|this| this.before(time))
+    }
+    pub fn then<S1: Schedule>(self, then: S1) -> ScheduleBuilder<Then<S0, S1>> {
+        self.map(|this| this.then(then))
+    }
+    pub fn throttling(self, interval: chrono::TimeDelta) -> ScheduleBuilder<Throttling<S0>> {
+        self.map(|this| this.throttling(interval))
+    }
+    pub fn dyn_box(self) -> ScheduleBuilder<Box<dyn Schedule>> {
+        self.map(|this| this.dyn_box())
+    }
+    pub fn build(self) -> S0 {
+        self.schedule
+    }
+}
