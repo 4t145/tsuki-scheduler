@@ -167,3 +167,10 @@ impl ScheduleDynBuilder {
         self.schedule
     }
 }
+
+impl IntoSchedule for ScheduleDynBuilder {
+    type Output = Box<dyn Schedule>;
+    fn into_schedule(self) -> Self::Output {
+        self.build()
+    }
+}
