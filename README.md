@@ -79,6 +79,34 @@ let schedule = Once::new(start_time)
     .before(start_time + TimeDelta::days(100));
 ```
 
+For some case you want to use a certain type for all schedule, you can use `Box<dyn Schedule>`, and there's a builder api for it.
+```rust
+use tsuki_scheduler::prelude::*;
+use chrono::{Utc, TimeDelta};
+let cron_list = Vec::<Cron<Utc>>::new();
+// add some cron expr
+
+// ...
+
+// build schedule
+let start_time = now() + TimeDelta::seconds(10);
+let mut schedule_builder = Once::new(start_time).dyn_builder()
+    .then(
+        Cron::utc_from_cron_expr("00 10 * * * *")
+            .expect("invalid cron")
+            .or(Period::new(
+                TimeDelta::minutes(80),
+                start_time + TimeDelta::minutes(80),
+            ))
+            .throttling(TimeDelta::minutes(30)),
+    )
+    .before(start_time + TimeDelta::days(100));
+// collect all cron expr
+schedule_builder = cron_list.into_iter().fold(schedule_builder, ScheduleDynBuilder::or);
+let schedule = schedule_builder.build();
+
+```
+
 ### Add executes and delete tasks
 ```rust
 use tsuki_scheduler::prelude::*;

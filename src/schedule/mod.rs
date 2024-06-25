@@ -18,26 +18,13 @@ mod period;
 pub use period::*;
 mod throttling;
 pub use throttling::*;
+mod never;
+pub use never::*;
 
 pub trait Schedule: Send + 'static {
     fn peek_next(&mut self) -> Option<Dtu>;
     fn next(&mut self) -> Option<Dtu>;
     fn forward_to(&mut self, dtu: Dtu);
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Never;
-
-impl Schedule for Never {
-    fn peek_next(&mut self) -> Option<Dtu> {
-        None
-    }
-
-    fn next(&mut self) -> Option<Dtu> {
-        None
-    }
-
-    fn forward_to(&mut self, _dtu: Dtu) {}
 }
 
 impl<T> Schedule for T
@@ -85,42 +72,23 @@ pub trait ScheduleExt: Schedule + Sized {
     fn dyn_builder(self) -> ScheduleDynBuilder {
         ScheduleDynBuilder::new(self)
     }
-    fn or<S: Schedule>(self, other: S) -> Or<Self, S> {
-        or::Or::new(self, other)
+    fn or<S: IntoSchedule>(self, other: S) -> Or<Self, S::Output> {
+        or::Or::new(self, other.into_schedule())
     }
-
     fn after(self, time: crate::Dtu) -> After<Self> {
         after::After::new(time, self)
     }
     fn before(self, time: crate::Dtu) -> Before<Self> {
         before::Before::new(time, self)
     }
-    fn then<S: Schedule>(self, then: S) -> Then<Self, S> {
-        then::Then::new(self, then)
+    fn then<S: IntoSchedule>(self, then: S) -> Then<Self, S::Output> {
+        then::Then::new(self, then.into_schedule())
     }
     fn throttling(self, interval: chrono::TimeDelta) -> Throttling<Self> {
         Throttling::new(self, interval)
     }
     fn dyn_box(self) -> Box<dyn Schedule> {
         Box::new(self)
-    }
-    fn box_or<S>(self, other: S) -> Box<dyn Schedule>
-    where
-        S: Schedule,
-    {
-        self.or(other).dyn_box()
-    }
-    fn box_after(self, time: crate::Dtu) -> Box<dyn Schedule> {
-        self.after(time).dyn_box()
-    }
-    fn box_before(self, time: crate::Dtu) -> Box<dyn Schedule> {
-        self.before(time).dyn_box()
-    }
-    fn box_then<S: Schedule>(self, then: S) -> Box<dyn Schedule> {
-        self.then(then).dyn_box()
-    }
-    fn box_throttling(self, interval: chrono::TimeDelta) -> Box<dyn Schedule> {
-        self.throttling(interval).dyn_box()
     }
 }
 
@@ -143,12 +111,12 @@ impl ScheduleDynBuilder {
     pub fn map<S: Schedule>(self, map: impl FnOnce(Box<dyn Schedule>) -> S) -> Self {
         ScheduleDynBuilder::new(map(self.schedule))
     }
-    pub fn new<S: Schedule>(schedule: S) -> Self {
+    pub fn new<S: IntoSchedule>(schedule: S) -> Self {
         Self {
-            schedule: schedule.dyn_box(),
+            schedule: schedule.into_schedule().dyn_box(),
         }
     }
-    pub fn or<S: Schedule>(self, other: S) -> ScheduleDynBuilder {
+    pub fn or<S: IntoSchedule>(self, other: S) -> ScheduleDynBuilder {
         self.map(|this| this.or(other))
     }
     pub fn after(self, time: crate::Dtu) -> ScheduleDynBuilder {
@@ -157,7 +125,7 @@ impl ScheduleDynBuilder {
     pub fn before(self, time: crate::Dtu) -> ScheduleDynBuilder {
         self.map(|this| this.before(time))
     }
-    pub fn then<S: Schedule>(self, then: S) -> ScheduleDynBuilder {
+    pub fn then<S: IntoSchedule>(self, then: S) -> ScheduleDynBuilder {
         self.map(|this| this.then(then))
     }
     pub fn throttling(self, interval: chrono::TimeDelta) -> ScheduleDynBuilder {
