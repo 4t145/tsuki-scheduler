@@ -48,7 +48,11 @@ impl Cron<Local> {
     }
 }
 
-impl<Z: chrono::offset::TimeZone> Schedule for Cron<Z> {
+impl<Z> Schedule for Cron<Z>
+where
+    Z: chrono::offset::TimeZone + Send + 'static,
+    Z::Offset: Send + 'static,
+{
     fn peek_next(&mut self) -> Option<Dtu> {
         self.iterator.peek().map(DateTime::to_utc)
     }

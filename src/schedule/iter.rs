@@ -20,7 +20,7 @@ impl<I: Iterator<Item = Dtu>> Iter<I> {
 }
 impl<I> Schedule for Iter<I>
 where
-    I: Iterator<Item = Dtu>,
+    I: Iterator<Item = Dtu> + Send + 'static,
 {
     fn peek_next(&mut self) -> Option<crate::Dtu> {
         self.inner.peek().copied()

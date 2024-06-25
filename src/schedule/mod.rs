@@ -19,15 +19,31 @@ pub use period::*;
 mod throttling;
 pub use throttling::*;
 
-pub trait Schedule {
+pub trait Schedule: Send + 'static {
     fn peek_next(&mut self) -> Option<Dtu>;
     fn next(&mut self) -> Option<Dtu>;
     fn forward_to(&mut self, dtu: Dtu);
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Never;
+
+impl Schedule for Never {
+    fn peek_next(&mut self) -> Option<Dtu> {
+        None
+    }
+
+    fn next(&mut self) -> Option<Dtu> {
+        None
+    }
+
+    fn forward_to(&mut self, _dtu: Dtu) {}
+}
+
 impl<T> Schedule for T
 where
     T: AsMut<dyn Schedule>,
+    T: Send + 'static,
 {
     fn peek_next(&mut self) -> Option<Dtu> {
         self.as_mut().peek_next()
@@ -69,6 +85,7 @@ pub trait ScheduleExt: Schedule + Sized {
     fn or<S: Schedule>(self, other: S) -> Or<Self, S> {
         or::Or::new(self, other)
     }
+
     fn after(self, time: crate::Dtu) -> After<Self> {
         after::After::new(time, self)
     }
@@ -81,11 +98,26 @@ pub trait ScheduleExt: Schedule + Sized {
     fn throttling(self, interval: chrono::TimeDelta) -> Throttling<Self> {
         Throttling::new(self, interval)
     }
-    fn dyn_box(self) -> Box<dyn Schedule>
-    where
-        Self: 'static,
-    {
+    fn dyn_box(self) -> Box<dyn Schedule> {
         Box::new(self)
+    }
+    fn box_or<S>(self, other: S) -> Box<dyn Schedule>
+    where
+        S: Schedule,
+    {
+        self.or(other).dyn_box()
+    }
+    fn box_after(self, time: crate::Dtu) -> Box<dyn Schedule> {
+        self.after(time).dyn_box()
+    }
+    fn box_before(self, time: crate::Dtu) -> Box<dyn Schedule> {
+        self.before(time).dyn_box()
+    }
+    fn box_then<S: Schedule>(self, then: S) -> Box<dyn Schedule> {
+        self.then(then).dyn_box()
+    }
+    fn box_throttling(self, interval: chrono::TimeDelta) -> Box<dyn Schedule> {
+        self.throttling(interval).dyn_box()
     }
 }
 
