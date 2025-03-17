@@ -111,10 +111,14 @@ let schedule = schedule_builder.build();
 ```rust
 use tsuki_scheduler::prelude::*;
 let mut scheduler = Scheduler::new(Tokio);
-let hello_tsuki_task = Task::tokio(
+let hello_tsuki_task = Task::new_async(
     Cron::local_from_cron_expr("*/2 * * * * *").unwrap(),
-    || async {
-        println!("Hello, tsuki!");
+    |
+        task_uid: TaskUid, 
+        // you can extract any numbers of args as it can be extracted from struct `TaskRun`
+        // time: Dtu
+    | async move {
+        println!("Hello, {task_uid} tsuki!");
     },
 );
 let id = TaskUid::uuid();
