@@ -1,5 +1,5 @@
 #![doc = include_str!("../README.md")]
-#![warn(clippy::unwrap_used, clippy::overflow_check_conditional)]
+#![warn(clippy::unwrap_used, clippy::panicking_overflow_checks)]
 #[cfg(feature = "async-scheduler")]
 mod async_scheduler;
 #[cfg(feature = "async-scheduler")]
@@ -38,6 +38,12 @@ impl TaskUid {
     }
     pub fn new(inner: u128) -> Self {
         Self(inner)
+    }
+}
+
+impl std::fmt::Display for TaskUid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:032x}", self.0)
     }
 }
 

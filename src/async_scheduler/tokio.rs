@@ -1,6 +1,6 @@
-use crate::{runtime::Tokio, AsyncSchedulerRunner};
+use crate::{AsyncSchedulerRunner, runtime::Tokio};
 
-use super::AsyncRuntime;
+use crate::runtime::AsyncRuntime;
 
 impl AsyncRuntime for Tokio {
     fn wake_after(&self, duration: std::time::Duration, ctx: &mut std::task::Context<'_>) {
@@ -9,6 +9,12 @@ impl AsyncRuntime for Tokio {
             tokio::time::sleep(duration).await;
             waker.wake()
         });
+    }
+    fn spawn<F>(task: F) -> Self::Handle
+    where
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        tokio::task::spawn(task)
     }
 }
 
