@@ -1,4 +1,4 @@
-pub use crate::{now, Dtu, RunTaskFn, Scheduler, Task, TaskUid};
+pub use crate::{Dtu, RunTaskFn, Scheduler, Task, TaskUid, now};
 
 #[cfg(feature = "async-scheduler")]
 pub use crate::async_scheduler::*;

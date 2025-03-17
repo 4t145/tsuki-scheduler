@@ -2,18 +2,16 @@ use std::{
     collections::VecDeque,
     future::{Future, Pending},
     sync::{Arc, Mutex},
-    time::Duration,
 };
 const DEFAULT_EXECUTE_DURATION: std::time::Duration = std::time::Duration::from_millis(100);
-use crate::{handle_manager::HandleManager, runtime::Runtime, Scheduler, Task, TaskUid};
+use crate::{
+    Scheduler, Task, TaskUid, handle_manager::HandleManager, prelude::AsyncRuntime,
+    runtime::Runtime,
+};
 #[cfg(feature = "async-std")]
 mod async_std;
 #[cfg(feature = "tokio")]
 mod tokio;
-pub trait AsyncRuntime: Runtime + Send + Sync {
-    /// wake runner after a duration
-    fn wake_after(&self, duration: Duration, ctx: &mut std::task::Context<'_>);
-}
 
 #[derive(Debug)]
 enum Event<R: Runtime> {

@@ -1,7 +1,7 @@
 use chrono::TimeDelta;
 
-use crate::schedule::Schedule;
 pub use crate::Dtu;
+use crate::schedule::Schedule;
 
 /// A schedule that throttles the inner schedule by a given interval.
 pub struct Throttling<S> {

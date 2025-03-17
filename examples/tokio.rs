@@ -18,7 +18,7 @@ async fn main() {
     let tsuki_task_id = TaskUid::uuid();
     async_client.add_task(
         tokio_task_id,
-        Task::tokio(
+        Task::new_async(
             Cron::local_from_cron_expr("*/2 * * * * *").unwrap(),
             || async {
                 println!("Hello, tsuki!");
@@ -28,14 +28,14 @@ async fn main() {
     let now = now();
     async_client.add_task(
         tsuki_task_id,
-        Task::tokio(
+        Task::new_async(
             Cron::local_from_cron_expr("*/3 * * * * *")
                 .unwrap()
                 .after(now + TimeDelta::seconds(1))
                 .before(now + TimeDelta::seconds(6))
                 .then(Cron::local_from_cron_expr("*/1 * * * * *").unwrap()),
-            || async {
-                println!("Hello, tokio!");
+            |id: TaskUid, time: Dtu| async move {
+                println!("Hello, tokio! {id} / {time}");
             },
         ),
     );
