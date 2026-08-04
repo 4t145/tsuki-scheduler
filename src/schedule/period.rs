@@ -27,34 +27,28 @@ impl Period {
     }
 }
 
+const NANOS_PER_SEC: i64 = 1_000_000_000;
+
+/// total nanoseconds of a [`TimeDelta`], in `i128` to never overflow
+fn total_nanos(delta: TimeDelta) -> i128 {
+    delta.num_seconds() as i128 * NANOS_PER_SEC as i128 + delta.subsec_nanos() as i128
+}
+
+/// `x mod p`, exact at nanosecond resolution
 fn time_mod(x: TimeDelta, p: TimeDelta) -> TimeDelta {
-    if p == TimeDelta::zero() {
+    let p_nanos = total_nanos(p);
+    if p_nanos <= 0 {
         panic!("Period must be positive")
     }
     if x < p {
         return x;
     }
-    let s_x = x.num_seconds();
-    let n_x = x.subsec_nanos() as i64;
-    let s_p = p.num_seconds();
-    let n_p = p.subsec_nanos() as i64;
-    const NANOS_PER_SEC: i64 = 1_000_000_000;
-    if s_p == 0 {
-        let nanos_in_total = (n_x % n_p) + ((NANOS_PER_SEC % n_p) * ((s_x) % n_p) % n_p);
-        let secs = nanos_in_total / NANOS_PER_SEC;
-        let nanos = (nanos_in_total % NANOS_PER_SEC) as u32;
-        return TimeDelta::new(secs, nanos).expect("invalid time delta");
-    }
-    let q_0 = s_x / (s_p + 1);
-    let s_r = (s_x % (s_p + 1)) + ((n_p * q_0) / NANOS_PER_SEC);
-    if n_p == 0 {
-        return TimeDelta::new(s_r, n_x as u32).expect("invalid time delta");
-    }
-    let n_r = n_x % n_p + ((NANOS_PER_SEC % n_p) * (s_r % n_p) % n_p);
-    let x = TimeDelta::new(s_r, n_r as u32)
-        .ok_or((s_r, n_r))
-        .expect("invalid time delta");
-    time_mod(x, p)
+    let rest = total_nanos(x) % p_nanos;
+    TimeDelta::new(
+        (rest / NANOS_PER_SEC as i128) as i64,
+        (rest % NANOS_PER_SEC as i128) as u32,
+    )
+    .expect("remainder is always a valid time delta")
 }
 impl Schedule for Period {
     fn peek_next(&mut self) -> Option<Dtu> {

@@ -1,4 +1,39 @@
-#![doc = include_str!("../README.md")]
+#![cfg_attr(
+    all(
+        feature = "cron",
+        feature = "uuid",
+        feature = "tokio",
+        feature = "async-std",
+        feature = "promise",
+        feature = "thread",
+        feature = "async-scheduler"
+    ),
+    doc = include_str!("../README.md")
+)]
+#![cfg_attr(
+    not(all(
+        feature = "cron",
+        feature = "uuid",
+        feature = "tokio",
+        feature = "async-std",
+        feature = "promise",
+        feature = "thread",
+        feature = "async-scheduler"
+    )),
+    doc = "A simple, light wight, composable and extensible scheduler for every runtime."
+)]
+#![cfg_attr(
+    not(all(
+        feature = "cron",
+        feature = "uuid",
+        feature = "tokio",
+        feature = "async-std",
+        feature = "promise",
+        feature = "thread",
+        feature = "async-scheduler"
+    )),
+    doc = "\nThe crate level guide (`README.md`) is only included when all features are\nenabled, since its examples cover every runtime. See <https://docs.rs/tsuki-scheduler>."
+)]
 #![warn(clippy::unwrap_used, clippy::panicking_overflow_checks)]
 #[cfg(feature = "async-scheduler")]
 mod async_scheduler;
@@ -22,6 +57,9 @@ pub mod handle_manager;
 pub mod runtime;
 /// Schedules and combinators
 pub mod schedule;
+/// Time set for schedule filters
+pub mod timeset;
+
 /// unique identifier for a task
 ///
 /// # Using uuid
@@ -72,10 +110,10 @@ impl<R: Runtime> std::fmt::Debug for Task<R> {
 /// ```
 /// # use tsuki_scheduler::prelude::*;
 /// # use chrono::Utc;
-/// let mut scheduler = Scheduler::new(Thread::new());
-/// let id = TaskUid::uuid();
+/// let mut scheduler = Scheduler::new(Local::new());
+/// let id = TaskUid::new(0);
 /// // add a new task
-/// scheduler.add_task(TaskUid::uuid(), Task::thread(Utc::now(), || {
+/// scheduler.add_task(id, Task::local(Utc::now(), || {
 ///     println!("Hello, world!");
 /// }));
 /// // execute all tasks by now
@@ -177,7 +215,8 @@ impl<R: Runtime, H> Scheduler<R, H> {
     }
     /// set handle manager
     /// # Example
-    /// ```
+    #[cfg_attr(feature = "thread", doc = "```")]
+    #[cfg_attr(not(feature = "thread"), doc = "```ignore")]
     /// # use tsuki_scheduler::prelude::*;
     /// // use a vector to collect handles
     /// let handles: Vec<<Thread as Runtime>::Handle> = vec![];

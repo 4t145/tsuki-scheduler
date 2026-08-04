@@ -130,6 +130,7 @@ pub fn test_throttling() {
 // 3. meanwhile, it will run every 80 minutes,
 // 4. though, it won't run within 30 minutes after the last run.
 // 5. finally, it will stop running after 100 days later.
+#[cfg(feature = "cron")]
 #[test]
 pub fn test_complex_example() {
     let start_time = now() + TimeDelta::seconds(10);
@@ -148,5 +149,43 @@ pub fn test_complex_example() {
     // I don't want to run this test forever, so I will just check the first 10 runs.
     for _ in 0..10 {
         println!("{:?}", _schedule.next());
+    }
+}
+
+/// `peek_next` must always agree with `next`: the throttle may only drop time points of the
+/// inner schedule, never invent one.
+///
+/// Regression test: it used to return the synthesized `last_call + interval`, which could leak
+/// a run past the limit of an outer combinator such as `before`.
+#[test]
+pub fn test_throttling_peek_matches_next() {
+    let day_0 = now();
+    let hour = TimeDelta::hours(1);
+    // runs every 15 minutes, at most one run per hour
+    let mut schedule = Period::new(TimeDelta::minutes(15), day_0).throttling(hour);
+    for i in 0..5 {
+        let peeked = schedule.peek_next();
+        assert_eq!(peeked, Some(day_0 + hour * i));
+        assert_eq!(schedule.next(), peeked, "peek and next disagree at run {i}");
+    }
+
+    // the last time point of the inner schedule before the throttle deadline used to be
+    // reported as `last_call + interval`, letting `before` accept a run it should reject
+    let mut schedule = Period::new(TimeDelta::minutes(15), day_0)
+        .throttling(hour)
+        .before(day_0 + TimeDelta::minutes(30));
+    assert_eq!(schedule.next(), Some(day_0));
+    assert_eq!(schedule.peek_next(), None);
+    assert_eq!(schedule.next(), None);
+}
+
+/// A time point landing exactly on `last_call + interval` is still allowed.
+#[test]
+pub fn test_throttling_boundary_is_inclusive() {
+    let day_0 = now();
+    let delta = TimeDelta::days(1);
+    let mut schedule = Period::new(delta, day_0).throttling(delta);
+    for i in 0..5 {
+        assert_eq!(schedule.next(), Some(day_0 + delta * i));
     }
 }

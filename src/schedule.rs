@@ -20,7 +20,10 @@ mod throttling;
 pub use throttling::*;
 mod never;
 pub use never::*;
+mod filtered;
+pub use filtered::*;
 
+/// Schedule is a series of time points, and user can forward the schedule to a specific time point.
 pub trait Schedule: Send + 'static {
     fn peek_next(&mut self) -> Option<Dtu>;
     fn next(&mut self) -> Option<Dtu>;
@@ -87,6 +90,14 @@ pub trait ScheduleExt: Schedule + Sized {
     fn throttling(self, interval: chrono::TimeDelta) -> Throttling<Self> {
         Throttling::new(self, interval)
     }
+    /// only keep the time points accepted by `filter`
+    fn filtered(self, filter: Filter) -> Filtered<Self> {
+        Filtered::new(self, filter)
+    }
+    /// only keep the time points contained by `set`
+    fn filtered_in<T: crate::timeset::TimeSet>(self, set: T) -> Filtered<Self> {
+        Filtered::in_set(self, set)
+    }
     fn dyn_box(self) -> Box<dyn Schedule> {
         Box::new(self)
     }
@@ -130,6 +141,12 @@ impl ScheduleDynBuilder {
     }
     pub fn throttling(self, interval: chrono::TimeDelta) -> ScheduleDynBuilder {
         self.map(|this| this.throttling(interval))
+    }
+    pub fn filtered(self, filter: Filter) -> ScheduleDynBuilder {
+        self.map(|this| this.filtered(filter))
+    }
+    pub fn filtered_in<T: crate::timeset::TimeSet>(self, set: T) -> ScheduleDynBuilder {
+        self.map(|this| this.filtered_in(set))
     }
     pub fn build(self) -> Box<dyn Schedule> {
         self.schedule

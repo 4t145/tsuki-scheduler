@@ -1,6 +1,6 @@
 [package]
 name = "tsuki-scheduler"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2024"
 authors = ["4t145<u4t145@163.com>"]
 description = "A simple, light wight, composable and extensible scheduler for every runtime."
@@ -38,3 +38,11 @@ wasm-bindgen-futures = ["dep:wasm-bindgen-futures"]
 [[example]]
 name = "tokio"
 required-features = ["tokio", "cron", "tokio/full", "async-scheduler"]
+
+[[test]]
+name = "test_thread"
+required-features = ["thread"]
+
+[[test]]
+name = "test_tokio"
+required-features = ["tokio"]

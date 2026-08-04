@@ -20,7 +20,9 @@ pub use promise::*;
 mod local;
 pub use local::*;
 
-use crate::{Dtu, Task, TaskRun, TaskUid, prelude::IntoSchedule};
+use crate::{Dtu, Task, TaskRun, TaskUid};
+
+use crate::schedule::IntoSchedule;
 
 pub trait Runtime {
     type Handle;
